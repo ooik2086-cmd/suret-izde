@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: suret-izde
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
