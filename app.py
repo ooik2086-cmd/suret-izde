@@ -95,14 +95,14 @@ UPLOAD_HOSTS = [
 def upload_image(raw, filename="photo.jpg"):
     contexts = [ssl.create_default_context(), _insecure_ctx()]
     last = "белгісіз қате"
-    deadline = time.time() + 80  # барлығы 80 сек ішінде (gunicorn 120-дан аз)
+    deadline = time.time() + 25  # gunicorn әдепкі 30с-тан аз ішінде аяқтаймыз
     for name, url, fields, filefield, parser in UPLOAD_HOSTS:
         for ctx in contexts:
             if time.time() > deadline:
                 raise RuntimeError(last + " (timeout)")
             try:
                 boundary, body = _multipart(fields, {filefield: (filename, raw, "image/jpeg")})
-                r = _post(url, boundary, body, ctx, timeout=22)
+                r = _post(url, boundary, body, ctx, timeout=10)
                 got = parser(r)
                 if got and got.startswith("http"):
                     return got
