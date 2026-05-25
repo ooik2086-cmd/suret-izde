@@ -1,0 +1,16 @@
+name: keep-alive
+
+# Сайтты әр ~10 минут сайын "оятып" тұрады, Render тегін жоспарда ұйықтамас үшін.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:   # қолмен де іске қосуға болады
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the app
+        run: |
+          echo "Pinging suret-izde..."
+          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 60 https://suret-izde.onrender.com/ || true
