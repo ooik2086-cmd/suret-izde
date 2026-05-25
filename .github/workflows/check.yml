@@ -13,6 +13,6 @@ jobs:
           URL=https://suret-izde.onrender.com
           code=$(curl -s -o page.html -w "%{http_code}" "$URL")
           echo "HTTP: $code"
-          for m in 'data-l="en"' 'data-l="ru"' 'searchAll' 'comboBlock' 'openMany' 'mode_both' 'manifest.webmanifest'; do
+          for m in 'data-l="en"' 'data-t="legend"' 'NEEDS_LOGIN' 'function lab' 'searchAll' 'comboBlock' 'manifest.webmanifest'; do
             if grep -q "$m" page.html; then echo "OK: $m"; else echo "MISSING: $m"; fi
           done
