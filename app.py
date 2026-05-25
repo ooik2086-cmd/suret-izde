@@ -253,6 +253,7 @@ PAGE = r"""<!DOCTYPE html>
                border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; }
   .seg button.active{ background:var(--grad); color:#fff; box-shadow:0 4px 14px rgba(37,99,235,.4); }
   .label{ font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 7px; }
+  .legend{ font-size:11px; color:var(--muted); margin:0 0 12px; line-height:1.5; }
   .gridb{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
   .gridb.three{ grid-template-columns:repeat(3,1fr); }
   .gridb .btn{ padding:13px 6px; font-size:13px; }
@@ -310,6 +311,7 @@ PAGE = r"""<!DOCTYPE html>
       <button data-m="name" onclick="setMode('name')" data-t="mode_name"></button>
       <button data-m="both" onclick="setMode('both')" data-t="mode_both"></button>
     </div>
+    <div class="legend" data-t="legend"></div>
 
     <div id="imgBlock">
       <div class="label" data-t="auto_lbl"></div>
@@ -370,6 +372,11 @@ const NETS = [["TikTok","https://www.tiktok.com/search?q={q}"],
   ["LinkedIn","https://www.linkedin.com/search/results/all/?keywords={q}"],
   ["Google","https://www.google.com/search?q={q}"]];
 
+// Осы сайттар нәтиже көрсету үшін СОЛ САЙТҚА тіркелуді талап етеді
+const NEEDS_LOGIN = new Set(["PimEyes","FaceCheck.ID","Lenso.ai","TikTok",
+  "Instagram","Facebook","VK","OK.ru","X","Threads","LinkedIn"]);
+function lab(name){ return (NEEDS_LOGIN.has(name)?"🔒 ":"🔓 ")+name; }
+
 const T = {
  kz:{ title:"Суретті іздеу", subtitle:"Сурет, есім немесе екеуімен бірге адамды интернеттен табыңыз.",
   install:"Орнату", data_title:"Дерек", data_desc:"Фото таңдаңыз және/немесе аты-жөнін жазыңыз.",
@@ -382,7 +389,8 @@ const T = {
   err:"Қате: ", need_photo:"Алдымен фото таңдап, жүктелуін күтіңіз.", need_name:"Алдымен аты-жөнін жазыңыз.",
   install_help:"Орнату үшін: браузердің «Бөлісу» (Share ⬆️) белгішесін басып, «Бастапқы экранға қосу» (Add to Home Screen) дегенді таңдаңыз. Сонда қолданба телефоныңызға орнатылады.",
   search_all:"Барлығынан іздеу (сурет + есім)", need_any:"Алдымен фото немесе аты-жөнін қосыңыз.",
-  blocked_title:"Сілтемелерді ашу", blocked_msg:"Браузер бірнеше терезені бірден ашуды бұғаттады. Төмендегі сілтемелерді бір-бірлеп басыңыз:" },
+  blocked_title:"Сілтемелерді ашу", blocked_msg:"Браузер бірнеше терезені бірден ашуды бұғаттады. Төмендегі сілтемелерді бір-бірлеп басыңыз:",
+  legend:"🔓 — тіркеусіз ашылады  ·  🔒 — сол сайтқа тіркелу қажет (біздің қолданбаға емес)" },
  ru:{ title:"Поиск по фото", subtitle:"Найдите человека по фото, имени или по обоим сразу.",
   install:"Установить", data_title:"Данные", data_desc:"Выберите фото и/или введите имя.",
   pick:"Выбрать фото", name_label:"Имя и фамилия (необязательно)", name_ph:"Например: Иван Петров",
@@ -394,7 +402,8 @@ const T = {
   err:"Ошибка: ", need_photo:"Сначала выберите фото и дождитесь загрузки.", need_name:"Сначала введите имя.",
   install_help:"Чтобы установить: нажмите «Поделиться» (Share ⬆️) в браузере и выберите «На экран Домой» (Add to Home Screen). Приложение установится на телефон.",
   search_all:"Искать везде (фото + имя)", need_any:"Сначала добавьте фото или имя.",
-  blocked_title:"Открыть ссылки", blocked_msg:"Браузер заблокировал открытие нескольких вкладок. Нажимайте ссылки ниже по одной:" },
+  blocked_title:"Открыть ссылки", blocked_msg:"Браузер заблокировал открытие нескольких вкладок. Нажимайте ссылки ниже по одной:",
+  legend:"🔓 — открывается без входа  ·  🔒 — нужен вход на сам сайт (не в наше приложение)" },
  en:{ title:"Photo Search", subtitle:"Find a person by photo, name, or both at once.",
   install:"Install", data_title:"Data", data_desc:"Pick a photo and/or enter a name.",
   pick:"Choose photo", name_label:"Full name (optional)", name_ph:"e.g. John Smith",
@@ -406,7 +415,8 @@ const T = {
   err:"Error: ", need_photo:"Choose a photo first and wait for upload.", need_name:"Enter a name first.",
   install_help:"To install: tap the browser Share button (⬆️) and choose 'Add to Home Screen'. The app will be installed on your phone.",
   search_all:"Search everywhere (photo + name)", need_any:"Add a photo or a name first.",
-  blocked_title:"Open links", blocked_msg:"Your browser blocked opening multiple tabs. Tap the links below one by one:" }
+  blocked_title:"Open links", blocked_msg:"Your browser blocked opening multiple tabs. Tap the links below one by one:",
+  legend:"🔓 — opens without login  ·  🔒 — requires login on that site (not our app)" }
 };
 
 let lang="kz", mode="image", imageUrl=null, deferredPrompt=null;
@@ -445,14 +455,14 @@ function showLinks(urls){
 function buildButtons(){
   const auto=document.getElementById("autoRow");
   AUTO.forEach(([label,eng])=>{ const b=document.createElement("button");
-    b.className="btn disabled"; b.textContent=label; b.dataset.eng=eng;
+    b.className="btn disabled"; b.textContent=lab(label); b.dataset.eng=eng;
     b.onclick=()=>reverse(eng); auto.appendChild(b); });
   const face=document.getElementById("faceRow");
   FACE.forEach(([label,url])=>{ const b=document.createElement("button");
-    b.className="btn"; b.textContent=label; b.onclick=()=>window.open(url,"_blank"); face.appendChild(b); });
+    b.className="btn"; b.textContent=lab(label); b.onclick=()=>window.open(url,"_blank"); face.appendChild(b); });
   const net=document.getElementById("netRow");
   NETS.forEach(([label,tmpl])=>{ const b=document.createElement("button");
-    b.className="btn ghost"; b.textContent=label; b.onclick=()=>openOne(tmpl); net.appendChild(b); });
+    b.className="btn ghost"; b.textContent=lab(label); b.onclick=()=>openOne(tmpl); net.appendChild(b); });
 }
 
 function st(msg,cls){ const e=document.getElementById("st1"); e.innerHTML=msg; e.className="status "+(cls||""); }
