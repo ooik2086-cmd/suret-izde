@@ -16,3 +16,10 @@ jobs:
           for m in 'data-l="en"' 'data-t="legend"' 'NEEDS_LOGIN' 'function lab' 'searchAll' 'comboBlock' 'manifest.webmanifest'; do
             if grep -q "$m" page.html; then echo "OK: $m"; else echo "MISSING: $m"; fi
           done
+      - name: Test upload endpoint
+        run: |
+          URL=https://suret-izde.onrender.com
+          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQAY3Y2wAAAAAElFTkSuQmCC" | base64 -d > test.png
+          resp=$(curl -s --max-time 60 -F "photo=@test.png" "$URL/upload")
+          echo "Upload response: $resp"
+          echo "$resp" | grep -q '"url"' && echo "UPLOAD OK" || echo "UPLOAD FAILED"
