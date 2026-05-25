@@ -322,6 +322,10 @@ PAGE = r"""<!DOCTYPE html>
       <div class="gridb three" id="netRow"></div>
       <button class="btn wide" onclick="openAllNames()">🌐 <span data-t="all_names"></span></button>
     </div>
+
+    <div id="comboBlock" style="display:none">
+      <button class="btn wide" onclick="searchAll()">🔍 <span data-t="search_all"></span></button>
+    </div>
   </div>
 
   <footer>© Suret Izde</footer>
@@ -333,6 +337,15 @@ PAGE = r"""<!DOCTYPE html>
     <h3 data-t="install"></h3>
     <p data-t="install_help"></p>
     <button class="btn" onclick="document.getElementById('instModal').classList.remove('show')">OK</button>
+  </div>
+</div>
+
+<!-- Бұғатталған сілтемелер -->
+<div class="modal" id="linksModal" onclick="this.classList.remove('show')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <h3 data-t="blocked_title"></h3>
+    <p data-t="blocked_msg"></p>
+    <div id="linksBox" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto"></div>
   </div>
 </div>
 
@@ -367,7 +380,9 @@ const T = {
   all_names:"Барлық желіден іздеу",
   uploading:"Фото жүктелуде...", done:"✅ Фото дайын! Енді суретпен іздеуге болады.",
   err:"Қате: ", need_photo:"Алдымен фото таңдап, жүктелуін күтіңіз.", need_name:"Алдымен аты-жөнін жазыңыз.",
-  install_help:"Орнату үшін: браузердің «Бөлісу» (Share ⬆️) белгішесін басып, «Бастапқы экранға қосу» (Add to Home Screen) дегенді таңдаңыз. Сонда қолданба телефоныңызға орнатылады." },
+  install_help:"Орнату үшін: браузердің «Бөлісу» (Share ⬆️) белгішесін басып, «Бастапқы экранға қосу» (Add to Home Screen) дегенді таңдаңыз. Сонда қолданба телефоныңызға орнатылады.",
+  search_all:"Барлығынан іздеу (сурет + есім)", need_any:"Алдымен фото немесе аты-жөнін қосыңыз.",
+  blocked_title:"Сілтемелерді ашу", blocked_msg:"Браузер бірнеше терезені бірден ашуды бұғаттады. Төмендегі сілтемелерді бір-бірлеп басыңыз:" },
  ru:{ title:"Поиск по фото", subtitle:"Найдите человека по фото, имени или по обоим сразу.",
   install:"Установить", data_title:"Данные", data_desc:"Выберите фото и/или введите имя.",
   pick:"Выбрать фото", name_label:"Имя и фамилия (необязательно)", name_ph:"Например: Иван Петров",
@@ -377,7 +392,9 @@ const T = {
   all_names:"Искать во всех сетях",
   uploading:"Загрузка фото...", done:"✅ Фото готово! Теперь можно искать по фото.",
   err:"Ошибка: ", need_photo:"Сначала выберите фото и дождитесь загрузки.", need_name:"Сначала введите имя.",
-  install_help:"Чтобы установить: нажмите «Поделиться» (Share ⬆️) в браузере и выберите «На экран Домой» (Add to Home Screen). Приложение установится на телефон." },
+  install_help:"Чтобы установить: нажмите «Поделиться» (Share ⬆️) в браузере и выберите «На экран Домой» (Add to Home Screen). Приложение установится на телефон.",
+  search_all:"Искать везде (фото + имя)", need_any:"Сначала добавьте фото или имя.",
+  blocked_title:"Открыть ссылки", blocked_msg:"Браузер заблокировал открытие нескольких вкладок. Нажимайте ссылки ниже по одной:" },
  en:{ title:"Photo Search", subtitle:"Find a person by photo, name, or both at once.",
   install:"Install", data_title:"Data", data_desc:"Pick a photo and/or enter a name.",
   pick:"Choose photo", name_label:"Full name (optional)", name_ph:"e.g. John Smith",
@@ -387,7 +404,9 @@ const T = {
   all_names:"Search all networks",
   uploading:"Uploading photo...", done:"✅ Photo ready! You can now search by photo.",
   err:"Error: ", need_photo:"Choose a photo first and wait for upload.", need_name:"Enter a name first.",
-  install_help:"To install: tap the browser Share button (⬆️) and choose 'Add to Home Screen'. The app will be installed on your phone." }
+  install_help:"To install: tap the browser Share button (⬆️) and choose 'Add to Home Screen'. The app will be installed on your phone.",
+  search_all:"Search everywhere (photo + name)", need_any:"Add a photo or a name first.",
+  blocked_title:"Open links", blocked_msg:"Your browser blocked opening multiple tabs. Tap the links below one by one:" }
 };
 
 let lang="kz", mode="image", imageUrl=null, deferredPrompt=null;
@@ -405,6 +424,22 @@ function setMode(m){ mode=m;
   document.querySelectorAll(".seg button").forEach(b=>b.classList.toggle("active", b.dataset.m===m));
   document.getElementById("imgBlock").style.display = (m==="image"||m==="both")?"block":"none";
   document.getElementById("nameBlock").style.display = (m==="name"||m==="both")?"block":"none";
+  document.getElementById("comboBlock").style.display = (m==="both")?"block":"none";
+}
+
+// Бірнеше сілтемені ашу; браузер бұғаттаса — тізім көрсетеді
+function openMany(urls){
+  if(!urls.length) return;
+  const blocked=[];
+  urls.forEach(u=>{ const w=window.open(u,"_blank"); if(!w) blocked.push(u); });
+  if(blocked.length) showLinks(blocked);
+}
+function hostName(u){ try{ return new URL(u).hostname.replace("www.",""); }catch(e){ return u; } }
+function showLinks(urls){
+  const box=document.getElementById("linksBox"); box.innerHTML="";
+  urls.forEach(u=>{ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener";
+    a.className="btn"; a.textContent="🔗 "+hostName(u); box.appendChild(a); });
+  document.getElementById("linksModal").classList.add("show");
 }
 
 function buildButtons(){
@@ -447,7 +482,17 @@ function getName(){ const n=document.getElementById("name").value.trim();
   if(!n){ alert(T[lang].need_name); return null; } return encodeURIComponent(n); }
 function openOne(tmpl){ const q=getName(); if(q) window.open(tmpl.replace("{q}",q),"_blank"); }
 function openAllNames(){ const q=getName(); if(!q) return;
-  NETS.forEach(([l,t])=>window.open(t.replace("{q}",q),"_blank")); }
+  openMany(NETS.map(([l,t])=>t.replace("{q}",q))); }
+
+// Біріктіріп іздеу: сурет (Yandex/Google/Bing/TinEye) + барлық желі
+function searchAll(){
+  const urls=[];
+  if(imageUrl){ for(const k in ENGINES){ urls.push(ENGINES[k].replace("{u}",encodeURIComponent(imageUrl))); } }
+  const n=document.getElementById("name").value.trim();
+  if(n){ const q=encodeURIComponent(n); NETS.forEach(([l,t])=>urls.push(t.replace("{q}",q))); }
+  if(!urls.length){ alert(T[lang].need_any); return; }
+  openMany(urls);
+}
 
 // ── PWA орнату ──
 window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferredPrompt=e; });
