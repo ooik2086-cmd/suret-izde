@@ -95,19 +95,20 @@ UPLOAD_HOSTS = [
 def upload_image(raw, filename="photo.jpg"):
     contexts = [ssl.create_default_context(), _insecure_ctx()]
     last = "белгісіз қате"
+    deadline = time.time() + 80  # барлығы 80 сек ішінде (gunicorn 120-дан аз)
     for name, url, fields, filefield, parser in UPLOAD_HOSTS:
-        for _ in range(2):  # әр хостқа 2 рет тырысамыз
-            for ctx in contexts:
-                try:
-                    boundary, body = _multipart(fields, {filefield: (filename, raw, "image/jpeg")})
-                    r = _post(url, boundary, body, ctx)
-                    got = parser(r)
-                    if got and got.startswith("http"):
-                        return got
-                    last = (r or "")[:200]
-                except Exception as e:
-                    last = str(e)
-            time.sleep(0.8)
+        for ctx in contexts:
+            if time.time() > deadline:
+                raise RuntimeError(last + " (timeout)")
+            try:
+                boundary, body = _multipart(fields, {filefield: (filename, raw, "image/jpeg")})
+                r = _post(url, boundary, body, ctx, timeout=22)
+                got = parser(r)
+                if got and got.startswith("http"):
+                    return got
+                last = (r or "")[:200]
+            except Exception as e:
+                last = str(e)
     raise RuntimeError(last)
 
 
@@ -386,7 +387,7 @@ const T = {
   auto_lbl:"Автоматты (фото жүктелген соң қосылады):", face_lbl:"Бет іздеу сайттары (фотоны өзіңіз жүктейсіз):",
   all_names:"Барлық желіден іздеу",
   uploading:"Фото жүктелуде...", done:"✅ Фото дайын! Енді суретпен іздеуге болады.",
-  err:"Қате: ", need_photo:"Алдымен фото таңдап, жүктелуін күтіңіз.", need_name:"Алдымен аты-жөнін жазыңыз.",
+  err:"Қате: ", err_long:"сервер ұзақ жауап берді, қайта көріңіз", need_photo:"Алдымен фото таңдап, жүктелуін күтіңіз.", need_name:"Алдымен аты-жөнін жазыңыз.",
   install_help:"Орнату үшін: браузердің «Бөлісу» (Share ⬆️) белгішесін басып, «Бастапқы экранға қосу» (Add to Home Screen) дегенді таңдаңыз. Сонда қолданба телефоныңызға орнатылады.",
   search_all:"Барлығынан іздеу (сурет + есім)", need_any:"Алдымен фото немесе аты-жөнін қосыңыз.",
   blocked_title:"Сілтемелерді ашу", blocked_msg:"Браузер бірнеше терезені бірден ашуды бұғаттады. Төмендегі сілтемелерді бір-бірлеп басыңыз:",
@@ -399,7 +400,7 @@ const T = {
   auto_lbl:"Автоматически (после загрузки фото):", face_lbl:"Сайты поиска по лицу (фото загружаете сами):",
   all_names:"Искать во всех сетях",
   uploading:"Загрузка фото...", done:"✅ Фото готово! Теперь можно искать по фото.",
-  err:"Ошибка: ", need_photo:"Сначала выберите фото и дождитесь загрузки.", need_name:"Сначала введите имя.",
+  err:"Ошибка: ", err_long:"сервер долго отвечал, попробуйте ещё раз", need_photo:"Сначала выберите фото и дождитесь загрузки.", need_name:"Сначала введите имя.",
   install_help:"Чтобы установить: нажмите «Поделиться» (Share ⬆️) в браузере и выберите «На экран Домой» (Add to Home Screen). Приложение установится на телефон.",
   search_all:"Искать везде (фото + имя)", need_any:"Сначала добавьте фото или имя.",
   blocked_title:"Открыть ссылки", blocked_msg:"Браузер заблокировал открытие нескольких вкладок. Нажимайте ссылки ниже по одной:",
@@ -412,7 +413,7 @@ const T = {
   auto_lbl:"Automatic (enabled after upload):", face_lbl:"Face search sites (you upload the photo):",
   all_names:"Search all networks",
   uploading:"Uploading photo...", done:"✅ Photo ready! You can now search by photo.",
-  err:"Error: ", need_photo:"Choose a photo first and wait for upload.", need_name:"Enter a name first.",
+  err:"Error: ", err_long:"server took too long, please try again", need_photo:"Choose a photo first and wait for upload.", need_name:"Enter a name first.",
   install_help:"To install: tap the browser Share button (⬆️) and choose 'Add to Home Screen'. The app will be installed on your phone.",
   search_all:"Search everywhere (photo + name)", need_any:"Add a photo or a name first.",
   blocked_title:"Open links", blocked_msg:"Your browser blocked opening multiple tabs. Tap the links below one by one:",
@@ -476,10 +477,13 @@ function onPick(ev){
   imageUrl=null; setAuto(false);
   st('⏳ '+T[lang].uploading,"warn");
   const fd=new FormData(); fd.append("photo",f);
-  fetch("/upload",{method:"POST",body:fd}).then(r=>r.json()).then(j=>{
-    if(j.url){ imageUrl=j.url; setAuto(true); st(T[lang].done,"ok"); }
-    else { st(T[lang].err+(j.error||"?"),"err"); }
-  }).catch(e=>st(T[lang].err+e,"err"));
+  fetch("/upload",{method:"POST",body:fd})
+    .then(r=>r.text())
+    .then(t=>{
+      let j; try{ j=JSON.parse(t); }catch(e){ j={error:T[lang].err_long}; }
+      if(j.url){ imageUrl=j.url; setAuto(true); st(T[lang].done,"ok"); }
+      else { st(T[lang].err+(j.error||"?"),"err"); }
+    }).catch(e=>st(T[lang].err+e,"err"));
 }
 function setAuto(on){
   document.querySelectorAll("#autoRow .btn").forEach(b=>b.classList.toggle("disabled",!on));
