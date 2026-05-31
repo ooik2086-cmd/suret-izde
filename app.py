@@ -298,6 +298,7 @@ PAGE = r"""<!DOCTYPE html>
     </div>
     <input type="file" id="file" accept="image/*" hidden onchange="onPick(event)">
     <div class="status" id="st1"></div>
+    <button id="copyLink" class="btn ghost wide" style="display:none" onclick="copyLink()">📋 <span data-t="copy_link"></span></button>
 
     <label class="nlabel" data-t="name_label"></label>
     <input type="text" id="name" class="text">
@@ -371,11 +372,15 @@ const NETS = [["TikTok","https://www.tiktok.com/search?q={q}"],
   ["X","https://twitter.com/search?q={q}&f=user"],
   ["Threads","https://www.threads.net/search?q={q}"],
   ["LinkedIn","https://www.linkedin.com/search/results/all/?keywords={q}"],
+  ["Pinterest","https://www.pinterest.com/search/users/?q={q}"],
+  ["Reddit","https://www.reddit.com/search/?q={q}&type=user"],
+  ["Twitch","https://www.twitch.tv/search?term={q}"],
+  ["Telegram","https://tgstat.com/search?q={q}"],
   ["Google","https://www.google.com/search?q={q}"]];
 
 // Осы сайттар нәтиже көрсету үшін СОЛ САЙТҚА тіркелуді талап етеді
 const NEEDS_LOGIN = new Set(["PimEyes","FaceCheck.ID","Lenso.ai","TikTok",
-  "Instagram","Facebook","VK","OK.ru","X","Threads","LinkedIn"]);
+  "Instagram","Facebook","VK","OK.ru","X","Threads","LinkedIn","Pinterest"]);
 function lab(name){ return (NEEDS_LOGIN.has(name)?"🔒 ":"🔓 ")+name; }
 
 const T = {
@@ -390,6 +395,7 @@ const T = {
   err:"Қате: ", err_long:"сервер ұзақ жауап берді, қайта көріңіз", need_photo:"Алдымен фото таңдап, жүктелуін күтіңіз.", need_name:"Алдымен аты-жөнін жазыңыз.",
   install_help:"Орнату үшін: браузердің «Бөлісу» (Share ⬆️) белгішесін басып, «Бастапқы экранға қосу» (Add to Home Screen) дегенді таңдаңыз. Сонда қолданба телефоныңызға орнатылады.",
   search_all:"Барлығынан іздеу (сурет + есім)", need_any:"Алдымен фото немесе аты-жөнін қосыңыз.",
+  copy_link:"Сурет сілтемесін көшіру", copied:"✅ Сілтеме көшірілді — бет іздеу сайтына қойыңыз.",
   blocked_title:"Сілтемелерді ашу", blocked_msg:"Браузер бірнеше терезені бірден ашуды бұғаттады. Төмендегі сілтемелерді бір-бірлеп басыңыз:",
   legend:"🔓 — тіркеусіз ашылады  ·  🔒 — сол сайтқа тіркелу қажет (біздің қолданбаға емес)" },
  ru:{ title:"Поиск по фото", subtitle:"Найдите человека по фото, имени или по обоим сразу.",
@@ -403,6 +409,7 @@ const T = {
   err:"Ошибка: ", err_long:"сервер долго отвечал, попробуйте ещё раз", need_photo:"Сначала выберите фото и дождитесь загрузки.", need_name:"Сначала введите имя.",
   install_help:"Чтобы установить: нажмите «Поделиться» (Share ⬆️) в браузере и выберите «На экран Домой» (Add to Home Screen). Приложение установится на телефон.",
   search_all:"Искать везде (фото + имя)", need_any:"Сначала добавьте фото или имя.",
+  copy_link:"Скопировать ссылку на фото", copied:"✅ Ссылка скопирована — вставьте на сайте поиска по лицу.",
   blocked_title:"Открыть ссылки", blocked_msg:"Браузер заблокировал открытие нескольких вкладок. Нажимайте ссылки ниже по одной:",
   legend:"🔓 — открывается без входа  ·  🔒 — нужен вход на сам сайт (не в наше приложение)" },
  en:{ title:"Photo Search", subtitle:"Find a person by photo, name, or both at once.",
@@ -416,6 +423,7 @@ const T = {
   err:"Error: ", err_long:"server took too long, please try again", need_photo:"Choose a photo first and wait for upload.", need_name:"Enter a name first.",
   install_help:"To install: tap the browser Share button (⬆️) and choose 'Add to Home Screen'. The app will be installed on your phone.",
   search_all:"Search everywhere (photo + name)", need_any:"Add a photo or a name first.",
+  copy_link:"Copy photo link", copied:"✅ Link copied — paste it on the face search site.",
   blocked_title:"Open links", blocked_msg:"Your browser blocked opening multiple tabs. Tap the links below one by one:",
   legend:"🔓 — opens without login  ·  🔒 — requires login on that site (not our app)" }
 };
@@ -475,18 +483,35 @@ function onPick(ev){
   reader.onload=e=>{ prev.innerHTML='<img src="'+e.target.result+'">'; };
   reader.readAsDataURL(f);
   imageUrl=null; setAuto(false);
+  document.getElementById("copyLink").style.display="none";
   st('⏳ '+T[lang].uploading,"warn");
   const fd=new FormData(); fd.append("photo",f);
   fetch("/upload",{method:"POST",body:fd})
     .then(r=>r.text())
     .then(t=>{
       let j; try{ j=JSON.parse(t); }catch(e){ j={error:T[lang].err_long}; }
-      if(j.url){ imageUrl=j.url; setAuto(true); st(T[lang].done,"ok"); }
+      if(j.url){ imageUrl=j.url; setAuto(true); st(T[lang].done,"ok");
+                 document.getElementById("copyLink").style.display="flex"; }
       else { st(T[lang].err+(j.error||"?"),"err"); }
     }).catch(e=>st(T[lang].err+e,"err"));
 }
 function setAuto(on){
   document.querySelectorAll("#autoRow .btn").forEach(b=>b.classList.toggle("disabled",!on));
+}
+// Жүктелген сурет сілтемесін аралық сақтағышқа көшіру (бет іздеу сайттарына қою үшін)
+function copyLink(){
+  if(!imageUrl){ alert(T[lang].need_photo); return; }
+  const done=()=>st(T[lang].copied,"ok");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(imageUrl).then(done).catch(()=>fallbackCopy(imageUrl,done));
+  } else { fallbackCopy(imageUrl,done); }
+}
+function fallbackCopy(text,done){
+  const t=document.createElement("textarea"); t.value=text;
+  t.style.position="fixed"; t.style.opacity="0"; document.body.appendChild(t);
+  t.focus(); t.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ prompt(text); }
+  document.body.removeChild(t);
 }
 function reverse(eng){
   if(!imageUrl){ alert(T[lang].need_photo); return; }

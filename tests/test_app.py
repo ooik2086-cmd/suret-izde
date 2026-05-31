@@ -106,6 +106,8 @@ def test_index_ok(client):
 @pytest.mark.parametrize("marker", [
     'data-l="en"', 'data-t="legend"', "NEEDS_LOGIN", "function lab",
     "searchAll", "comboBlock", "manifest.webmanifest",
+    # жаңа желілер мен сурет сілтемесін көшіру мүмкіндігі
+    "Pinterest", "Reddit", "Twitch", "function copyLink", "fallbackCopy",
 ])
 def test_index_contains_feature_markers(client, marker):
     # check.yml тірі сайтта осы белгілерді іздейді — бұл жерде жергілікті бекітеміз.
