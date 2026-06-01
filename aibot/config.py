@@ -15,6 +15,13 @@ def _int(name, default):
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "").strip()
 
+# Тұрақты дерекқор (Render Postgres). Болмаса — жергілікті SQLite қолданылады.
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+
+# Үлкен видео жүктеу үшін (Pyrogram / MTProto) — my.telegram.org-тан.
+TG_API_ID = _int("TG_API_ID", 0)
+TG_API_HASH = os.environ.get("TG_API_HASH", "").strip()
+
 # Render тегін жоспарда web-сервис $PORT-қа байлануды талап етеді.
 PORT = _int("PORT", 8080)
 
