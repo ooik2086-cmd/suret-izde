@@ -27,6 +27,9 @@ def _db():
             "user_id INTEGER, day TEXT, mode TEXT, n INTEGER, "
             "PRIMARY KEY(user_id, day, mode))"
         )
+        _conn.execute(
+            "CREATE TABLE IF NOT EXISTS credits(user_id INTEGER PRIMARY KEY, n INTEGER)"
+        )
         _conn.commit()
     return _conn
 
@@ -81,3 +84,33 @@ def record_use(user_id, mode):
 
 def usage_summary(user_id):
     return {m: "%d/%d" % (used_today(user_id, m), LIMITS.get(m, 0)) for m in LIMITS}
+
+
+# ─────────────────────────── кредиттер (сатып алынған генерация) ───────────────────────────
+def get_credits(user_id):
+    with _lock:
+        row = _db().execute(
+            "SELECT n FROM credits WHERE user_id=?", (user_id,)
+        ).fetchone()
+    return row[0] if row else 0
+
+
+def add_credits(user_id, n):
+    with _lock:
+        _db().execute(
+            "INSERT INTO credits(user_id, n) VALUES(?,?) "
+            "ON CONFLICT(user_id) DO UPDATE SET n = n + excluded.n",
+            (user_id, n),
+        )
+        _db().commit()
+    return get_credits(user_id)
+
+
+def use_credit(user_id):
+    """Бір кредитті жұмсайды. Сәтті болса True қайтарады."""
+    with _lock:
+        cur = _db().execute(
+            "UPDATE credits SET n = n - 1 WHERE user_id=? AND n > 0", (user_id,)
+        )
+        _db().commit()
+        return cur.rowcount > 0

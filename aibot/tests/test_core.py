@@ -66,23 +66,52 @@ def test_usage_summary_shape(tmpdb):
     assert s["image"].endswith("/5")
 
 
+# ─────────────────────────── db: кредиттер (төлем) ───────────────────────────
+def test_credits_add_and_use(tmpdb):
+    uid = 444
+    assert tmpdb.get_credits(uid) == 0
+    assert tmpdb.add_credits(uid, 10) == 10
+    assert tmpdb.add_credits(uid, 5) == 15      # қосылады
+    assert tmpdb.use_credit(uid) is True
+    assert tmpdb.get_credits(uid) == 14
+
+
+def test_use_credit_when_empty_returns_false(tmpdb):
+    assert tmpdb.use_credit(555) is False
+    assert tmpdb.get_credits(555) == 0
+
+
 # ─────────────────────────── providers ───────────────────────────
-def test_demo_provider_returns_image_url():
+def test_free_provider_real_image_url():
     import asyncio
     import providers
-    p = providers.DemoProvider()
-    res = asyncio.run(p.generate("image", prompt="кеме"))
+    res = asyncio.run(providers.FreeProvider().generate("image", prompt="кеме теңізде"))
     assert res.kind == "image"
-    assert res.url.startswith("http")
-    assert res.note == "demo"
+    assert res.url.startswith("https://image.pollinations.ai/prompt/")
+    assert res.note == ""  # тегін режимде сурет — нақты генерация
 
 
-def test_get_provider_demo_without_token(monkeypatch):
+def test_free_provider_other_modes_need_token():
+    import asyncio
+    import providers
+    for mode in ("video", "restore", "avatar"):
+        res = asyncio.run(providers.FreeProvider().generate(mode, prompt="x"))
+        assert res.note == "needs_token"
+
+
+def test_demo_provider_returns_placeholder():
+    import asyncio
+    import providers
+    res = asyncio.run(providers.DemoProvider().generate("image", prompt="кеме"))
+    assert res.kind == "image" and res.url.startswith("http") and res.note == "demo"
+
+
+def test_get_provider_free_without_token(monkeypatch):
     sys.modules.pop("config", None)
     sys.modules.pop("providers", None)
     monkeypatch.delenv("REPLICATE_API_TOKEN", raising=False)
     import providers
-    assert isinstance(providers.get_provider(), providers.DemoProvider)
+    assert isinstance(providers.get_provider(), providers.FreeProvider)
 
 
 def test_first_url_handles_list_and_object():

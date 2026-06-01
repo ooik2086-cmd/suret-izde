@@ -15,12 +15,14 @@ import logging
 import sys
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    LabeledPrice,
     Message,
+    PreCheckoutQuery,
 )
 from aiohttp import web
 
@@ -51,12 +53,31 @@ def main_menu(lang):
     rows += [
         [InlineKeyboardButton(text=t(lang, "menu_restore"), callback_data="m:restore")],
         [InlineKeyboardButton(text=t(lang, "menu_avatar"), callback_data="m:avatar")],
+        [InlineKeyboardButton(text=t(lang, "menu_buy"), callback_data="buy")],
         [
             InlineKeyboardButton(text=t(lang, "menu_balance"), callback_data="balance"),
             InlineKeyboardButton(text=t(lang, "menu_lang"), callback_data="lang"),
         ],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def buy_menu(lang):
+    rows = [
+        [InlineKeyboardButton(
+            text=t(lang, "pkg_label", n=n, stars=stars),
+            callback_data="pkg:%d:%d" % (n, stars))]
+        for n, stars in config.PACKAGES
+    ]
+    rows.append([InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def limit_menu(lang):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "menu_buy"), callback_data="buy")],
+        [InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")],
+    ])
 
 
 def lang_menu():
@@ -108,12 +129,49 @@ async def on_setlang(c: CallbackQuery):
 async def on_balance(c: CallbackQuery):
     lang = db.get_lang(c.from_user.id)
     s = db.usage_summary(c.from_user.id)
-    await c.message.edit_text(
-        t(lang, "balance", image=s["image"], video=s["video"],
-          restore=s["restore"], avatar=s["avatar"]),
-        reply_markup=back_menu(lang),
+    text = t(lang, "balance", image=s["image"], video=s["video"],
+             restore=s["restore"], avatar=s["avatar"])
+    text += "\n" + t(lang, "credits_left", n=db.get_credits(c.from_user.id))
+    await c.message.edit_text(text, reply_markup=back_menu(lang))
+    await c.answer()
+
+
+@dp.callback_query(F.data == "buy")
+async def on_buy(c: CallbackQuery):
+    lang = db.get_lang(c.from_user.id)
+    await c.message.edit_text(t(lang, "buy_title"), reply_markup=buy_menu(lang))
+    await c.answer()
+
+
+@dp.callback_query(F.data.startswith("pkg:"))
+async def on_pkg(c: CallbackQuery):
+    lang = db.get_lang(c.from_user.id)
+    _, n, stars = c.data.split(":")
+    n, stars = int(n), int(stars)
+    # Telegram Stars: валюта "XTR", provider_token бос жол, баға = жұлдыз саны.
+    await c.message.answer_invoice(
+        title=t(lang, "invoice_title", n=n),
+        description=t(lang, "invoice_desc", n=n),
+        payload="credits:%d" % n,
+        currency="XTR",
+        provider_token="",
+        prices=[LabeledPrice(label=t(lang, "pkg_label", n=n, stars=stars), amount=stars)],
     )
     await c.answer()
+
+
+@dp.pre_checkout_query()
+async def on_pre_checkout(q: PreCheckoutQuery):
+    await q.answer(ok=True)
+
+
+@dp.message(F.successful_payment)
+async def on_paid(m: Message):
+    lang = db.get_lang(m.from_user.id)
+    payload = m.successful_payment.invoice_payload
+    n = int(payload.split(":", 1)[1]) if payload.startswith("credits:") else 0
+    db.add_credits(m.from_user.id, n)
+    await m.answer(t(lang, "pay_success", n=n), reply_markup=main_menu(lang))
 
 
 @dp.callback_query(F.data.startswith("m:"))
@@ -161,11 +219,16 @@ async def on_unknown_cmd(m: Message):
 
 # ─────────────────────────── генерация ───────────────────────────
 async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None):
-    ok, used, limit = db.can_use(m.from_user.id, mode)
+    uid = m.from_user.id
+    ok, used, limit = db.can_use(uid, mode)
+    use_paid = False
     if not ok:
-        await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
-                       reply_markup=main_menu(lang))
-        return
+        if db.get_credits(uid) > 0:
+            use_paid = True  # тегін лимит бітті — төленген кредиттен аламыз
+        else:
+            await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
+                           reply_markup=limit_menu(lang))
+            return
 
     status = await m.answer(t(lang, "working"))
     try:
@@ -175,7 +238,16 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None):
         await status.edit_text(t(lang, "error"), reply_markup=main_menu(lang))
         return
 
-    db.record_use(m.from_user.id, mode)
+    # Тегін режимде видео/жаңарту/аватар нақты AI кілтін қажет етеді.
+    if res.note == "needs_token":
+        await status.edit_text(t(lang, "needs_token"), reply_markup=main_menu(lang))
+        return
+
+    # Нәтиже сәтті — енді ғана есептейміз (кредит немесе тегін лимит).
+    if use_paid:
+        db.use_credit(uid)
+    else:
+        db.record_use(uid, mode)
     caption = t(lang, "done")
     if res.note == "demo":
         caption += "\n" + t(lang, "demo_note")

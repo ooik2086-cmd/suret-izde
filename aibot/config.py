@@ -41,6 +41,10 @@ MODELS = {
 # Видеоны мүлдем өшіру керек болса: DISABLE_VIDEO=1
 DISABLE_VIDEO = os.environ.get("DISABLE_VIDEO", "").strip() in ("1", "true", "yes")
 
+# ── Telegram Stars пакеттері (генерация_саны, жұлдыз_бағасы) ──
+# Лимит біткенде осы пакеттерді сатамыз. Stars-ты банксіз қабылдауға болады.
+PACKAGES = [(10, 50), (50, 200), (250, 750)]
+
 DEFAULT_LANG = os.environ.get("DEFAULT_LANG", "kz")
 
 # SQLite дерекқор жолы (лимит/тіл сақтау үшін).

@@ -11,6 +11,8 @@
 
 import asyncio
 import io
+import random
+from urllib.parse import quote
 
 from config import MODELS, REPLICATE_API_TOKEN
 
@@ -70,17 +72,39 @@ class ReplicateProvider:
         return GenResult(kind, url=url)
 
 
+class FreeProvider:
+    """Кілтсіз тегін режим.
+
+    Сурет — нақты генерация (Pollinations, API кілті қажет емес, тікелей
+    сурет сілтемесін береді). Видео/жаңарту/аватар нақты AI кілтін
+    (REPLICATE_API_TOKEN) талап етеді — оларға "needs_token" белгісін
+    қайтарамыз, бот пайдаланушыға түсіндіреді.
+    """
+
+    available = True
+
+    async def generate(self, mode, prompt=None, image_bytes=None):
+        if mode == "image":
+            seed = random.randint(1, 10_000_000)
+            url = ("https://image.pollinations.ai/prompt/%s"
+                   "?width=768&height=768&nologo=true&seed=%d"
+                   % (quote((prompt or "art").strip())[:1500], seed))
+            return GenResult("image", url=url)
+        # Қалған режимдер нақты AI кілтін қажет етеді.
+        return GenResult("text", note="needs_token")
+
+
 class DemoProvider:
-    """Токенсіз режим — нақты генерациясыз, тек көрнекі placeholder."""
+    """Желісіз/сынақ режимі — placeholder сурет (нақты генерациясыз)."""
 
     available = False
 
     async def generate(self, mode, prompt=None, image_bytes=None):
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
         seed = abs(hash((mode, prompt or "", len(image_bytes or b"")))) % 1000
         url = "https://picsum.photos/seed/%d/768/768" % seed
         return GenResult("image", url=url, note="demo")
 
 
 def get_provider():
-    return ReplicateProvider() if REPLICATE_API_TOKEN else DemoProvider()
+    return ReplicateProvider() if REPLICATE_API_TOKEN else FreeProvider()
