@@ -14,6 +14,32 @@ import io
 import random
 from urllib.parse import quote
 
+import aiohttp
+
+
+async def translate_to_en(text):
+    """Қазақша/орысша тапсырманы ағылшыншаға аударады (сурет модельдері
+    ағылшынды жақсы түсінеді). Аударма сәтсіз болса — түпнұсқаны қайтарады.
+    Кілт қажет емес (Google тегін эндпойнты)."""
+    text = (text or "").strip()
+    if not text:
+        return "beautiful art"
+    # Бәрі ASCII (ағылшын) болса — аударудың қажеті жоқ.
+    if all(ord(c) < 128 for c in text):
+        return text
+    try:
+        params = {"client": "gtx", "sl": "auto", "tl": "en", "dt": "t", "q": text}
+        timeout = aiohttp.ClientTimeout(total=8)
+        async with aiohttp.ClientSession(timeout=timeout) as s:
+            async with s.get(
+                "https://translate.googleapis.com/translate_a/single", params=params
+            ) as r:
+                data = await r.json(content_type=None)
+        out = "".join(seg[0] for seg in data[0] if seg and seg[0]).strip()
+        return out or text
+    except Exception:
+        return text
+
 from config import MODELS, REPLICATE_API_TOKEN
 
 
@@ -85,10 +111,11 @@ class FreeProvider:
 
     async def generate(self, mode, prompt=None, image_bytes=None):
         if mode == "image":
+            en = await translate_to_en(prompt)
             seed = random.randint(1, 10_000_000)
             url = ("https://image.pollinations.ai/prompt/%s"
-                   "?width=768&height=768&nologo=true&seed=%d"
-                   % (quote((prompt or "art").strip())[:1500], seed))
+                   "?width=1024&height=1024&model=flux&nologo=true&seed=%d"
+                   % (quote(en)[:1500], seed))
             return GenResult("image", url=url)
         # Қалған режимдер нақты AI кілтін қажет етеді.
         return GenResult("text", note="needs_token")
