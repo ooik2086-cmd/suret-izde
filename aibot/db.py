@@ -115,7 +115,7 @@ def can_use(user_id, mode):
 def record_use(user_id, mode):
     _exec(
         "INSERT INTO usage(user_id, day, mode, n) VALUES(?,?,?,1) "
-        "ON CONFLICT(user_id, day, mode) DO UPDATE SET n = n + 1",
+        "ON CONFLICT(user_id, day, mode) DO UPDATE SET n = usage.n + 1",
         (user_id, _today(), mode),
     )
 
@@ -133,7 +133,7 @@ def get_credits(user_id):
 def add_credits(user_id, n):
     _exec(
         "INSERT INTO credits(user_id, n) VALUES(?,?) "
-        "ON CONFLICT(user_id) DO UPDATE SET n = n + excluded.n",
+        "ON CONFLICT(user_id) DO UPDATE SET n = credits.n + excluded.n",
         (user_id, n),
     )
     return get_credits(user_id)
