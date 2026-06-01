@@ -30,6 +30,9 @@ def _db():
         _conn.execute(
             "CREATE TABLE IF NOT EXISTS credits(user_id INTEGER PRIMARY KEY, n INTEGER)"
         )
+        _conn.execute(
+            "CREATE TABLE IF NOT EXISTS subs(user_id INTEGER PRIMARY KEY, until TEXT)"
+        )
         _conn.commit()
     return _conn
 
@@ -114,3 +117,39 @@ def use_credit(user_id):
         )
         _db().commit()
         return cur.rowcount > 0
+
+
+# ─────────────────────────── жазылым (подписка) ───────────────────────────
+def sub_until(user_id):
+    """Жазылымның аяқталу уақыты (datetime) немесе None."""
+    with _lock:
+        row = _db().execute(
+            "SELECT until FROM subs WHERE user_id=?", (user_id,)
+        ).fetchone()
+    if not row or not row[0]:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(row[0])
+    except ValueError:
+        return None
+
+
+def is_subscribed(user_id):
+    u = sub_until(user_id)
+    return bool(u and u > datetime.datetime.utcnow())
+
+
+def add_sub(user_id, days):
+    """Жазылымды `days` күнге ұзартады (белсенді болса — соңынан қосады)."""
+    now = datetime.datetime.utcnow()
+    cur = sub_until(user_id)
+    base = cur if (cur and cur > now) else now
+    until = (base + datetime.timedelta(days=days)).isoformat()
+    with _lock:
+        _db().execute(
+            "INSERT INTO subs(user_id, until) VALUES(?,?) "
+            "ON CONFLICT(user_id) DO UPDATE SET until=excluded.until",
+            (user_id, until),
+        )
+        _db().commit()
+    return until

@@ -81,6 +81,22 @@ def test_use_credit_when_empty_returns_false(tmpdb):
     assert tmpdb.get_credits(555) == 0
 
 
+# ─────────────────────────── db: жазылым (подписка) ───────────────────────────
+def test_subscription_activates_and_extends(tmpdb):
+    uid = 777
+    assert tmpdb.is_subscribed(uid) is False
+    tmpdb.add_sub(uid, 7)
+    assert tmpdb.is_subscribed(uid) is True
+    first = tmpdb.sub_until(uid)
+    tmpdb.add_sub(uid, 30)  # белсендінің соңынан қосылады
+    assert tmpdb.sub_until(uid) > first
+
+
+def test_no_subscription_by_default(tmpdb):
+    assert tmpdb.is_subscribed(888) is False
+    assert tmpdb.sub_until(888) is None
+
+
 # ─────────────────────────── providers ───────────────────────────
 def test_free_provider_real_image_url():
     import asyncio

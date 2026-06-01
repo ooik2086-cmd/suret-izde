@@ -66,12 +66,17 @@ def main_menu(lang):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def sub_name(lang, days):
+    """Жазылым атауы: 7 күн → апта, әйтпесе ай."""
+    return t(lang, "sub_week") if days <= 7 else t(lang, "sub_month")
+
+
 def buy_menu(lang):
     rows = [
         [InlineKeyboardButton(
-            text=t(lang, "pkg_label", n=n, stars=stars),
-            callback_data="pkg:%d:%d" % (n, stars))]
-        for n, stars in config.PACKAGES
+            text="%s — %d ⭐" % (sub_name(lang, days), stars),
+            callback_data="sub:%d" % days)]
+        for days, stars in config.SUBSCRIPTIONS
     ]
     rows.append([InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -136,6 +141,9 @@ async def on_balance(c: CallbackQuery):
     text = t(lang, "balance", image=s["image"], video=s["video"],
              restore=s["restore"], avatar=s["avatar"])
     text += "\n" + t(lang, "credits_left", n=db.get_credits(c.from_user.id))
+    if db.is_subscribed(c.from_user.id):
+        until = db.sub_until(c.from_user.id).date().isoformat()
+        text += "\n" + t(lang, "sub_active", until=until)
     await c.message.edit_text(text, reply_markup=back_menu(lang))
     await c.answer()
 
@@ -164,6 +172,26 @@ async def on_pkg(c: CallbackQuery):
     await c.answer()
 
 
+@dp.callback_query(F.data.startswith("sub:"))
+async def on_sub(c: CallbackQuery):
+    lang = db.get_lang(c.from_user.id)
+    days = int(c.data.split(":", 1)[1])
+    stars = dict(config.SUBSCRIPTIONS).get(days)
+    if not stars:
+        await c.answer()
+        return
+    name = sub_name(lang, days)
+    await c.message.answer_invoice(
+        title=t(lang, "sub_invoice_title", name=name),
+        description=t(lang, "sub_invoice_desc", name=name),
+        payload="sub:%d" % days,
+        currency="XTR",
+        provider_token="",
+        prices=[LabeledPrice(label=name, amount=stars)],
+    )
+    await c.answer()
+
+
 @dp.pre_checkout_query()
 async def on_pre_checkout(q: PreCheckoutQuery):
     await q.answer(ok=True)
@@ -173,6 +201,12 @@ async def on_pre_checkout(q: PreCheckoutQuery):
 async def on_paid(m: Message):
     lang = db.get_lang(m.from_user.id)
     payload = m.successful_payment.invoice_payload
+    if payload.startswith("sub:"):
+        days = int(payload.split(":", 1)[1])
+        db.add_sub(m.from_user.id, days)
+        await m.answer(t(lang, "pay_success_sub", name=sub_name(lang, days)),
+                       reply_markup=main_menu(lang))
+        return
     n = int(payload.split(":", 1)[1]) if payload.startswith("credits:") else 0
     db.add_credits(m.from_user.id, n)
     await m.answer(t(lang, "pay_success", n=n), reply_markup=main_menu(lang))
@@ -253,15 +287,17 @@ async def on_unknown_cmd(m: Message):
 # ─────────────────────────── генерация ───────────────────────────
 async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, video_bytes=None):
     uid = m.from_user.id
-    ok, used, limit = db.can_use(uid, mode)
+    subscribed = db.is_subscribed(uid)  # жазылым белсенді болса — шексіз
     use_paid = False
-    if not ok:
-        if db.get_credits(uid) > 0:
-            use_paid = True  # тегін лимит бітті — төленген кредиттен аламыз
-        else:
-            await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
-                           reply_markup=limit_menu(lang))
-            return
+    if not subscribed:
+        ok, used, limit = db.can_use(uid, mode)
+        if not ok:
+            if db.get_credits(uid) > 0:
+                use_paid = True  # тегін лимит бітті — төленген кредиттен аламыз
+            else:
+                await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
+                               reply_markup=limit_menu(lang))
+                return
 
     status = await m.answer(t(lang, "working"))
     try:
@@ -277,8 +313,10 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, 
         await status.edit_text(t(lang, "needs_token"), reply_markup=main_menu(lang))
         return
 
-    # Нәтиже сәтті — енді ғана есептейміз (кредит немесе тегін лимит).
-    if use_paid:
+    # Нәтиже сәтті — есептейміз. Жазылым болса — шектеусіз, есептемейміз.
+    if subscribed:
+        pass
+    elif use_paid:
         db.use_credit(uid)
     else:
         db.record_use(uid, mode)
