@@ -79,18 +79,12 @@ def sub_name(lang, days):
 
 
 def buy_menu(lang):
-    # Жазылым (шексіз сурет) + кредит пакеттері (ақылы видео/жандандыру т.б.)
+    # Қарапайым: тек жазылым (1 апта / 1 ай). Жазылым = бәріне қолжетім.
     rows = [
         [InlineKeyboardButton(
             text="%s — %d ⭐" % (sub_name(lang, days), stars),
             callback_data="sub:%d" % days)]
         for days, stars in config.SUBSCRIPTIONS
-    ]
-    rows += [
-        [InlineKeyboardButton(
-            text=t(lang, "pkg_label", n=n, stars=stars),
-            callback_data="pkg:%d:%d" % (n, stars))]
-        for n, stars in config.PACKAGES
     ]
     rows.append([InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -362,21 +356,20 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None,
                          video_bytes=None, images=None, uid=None):
     if uid is None:
         uid = m.from_user.id
-    # charge: нәтиже сәтті болғанда нені есептейміз — "credit" | "limit" | None
+    # charge: нәтиже сәтті болғанда нені есептейміз — "limit" | None
     charge = None
     if mode in PAID_MODES:
-        # Ақылы режим: тек сатып алынған кредитпен (тегін/шексіз емес) → зиянсыз.
-        if db.get_credits(uid) <= 0:
-            await m.answer(t(lang, "need_credit"), reply_markup=limit_menu(lang))
+        # Ақылы режим (біріктіру/жандандыру) — жазылым керек. Жоқ болса → бірден төлем.
+        if not db.is_subscribed(uid):
+            await m.answer(t(lang, "need_sub"), reply_markup=buy_menu(lang))
             return
-        charge = "credit"
     elif db.is_subscribed(uid):
-        charge = None  # жазылым = шексіз сурет
+        charge = None  # жазылым = шексіз
     else:
         ok, used, limit = db.can_use(uid, mode)
         if not ok:
             await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
-                           reply_markup=limit_menu(lang))
+                           reply_markup=buy_menu(lang))
             return
         charge = "limit"
 
