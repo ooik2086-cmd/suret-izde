@@ -1,0 +1,47 @@
+# -*- coding: utf-8 -*-
+"""Боттың баптаулары — бәрі орта айнымалылары (env) арқылы өзгертіледі."""
+
+import os
+
+
+def _int(name, default):
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+# ── Негізгі кілттер ──
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "").strip()
+
+# Render тегін жоспарда web-сервис $PORT-қа байлануды талап етеді.
+PORT = _int("PORT", 8080)
+
+# Боттың әкімшісі (статистика т.б. үшін, міндетті емес).
+ADMIN_ID = _int("ADMIN_ID", 0)
+
+# ── Тегін лимиттер (тәулігіне әр пайдаланушыға) ──
+# Видео қымбат болғандықтан әдепкіде аз. Бәрін env арқылы реттеуге болады.
+LIMITS = {
+    "image":   _int("LIMIT_IMAGE", 5),
+    "video":   _int("LIMIT_VIDEO", 1),
+    "restore": _int("LIMIT_RESTORE", 3),
+    "avatar":  _int("LIMIT_AVATAR", 3),
+}
+
+# ── Replicate модельдері (керек болса env-пен ауыстырыңыз) ──
+MODELS = {
+    "image":   os.environ.get("MODEL_IMAGE",   "black-forest-labs/flux-schnell"),
+    "video":   os.environ.get("MODEL_VIDEO",   "minimax/video-01"),
+    "restore": os.environ.get("MODEL_RESTORE", "tencentarc/gfpgan"),
+    "avatar":  os.environ.get("MODEL_AVATAR",  "tencentarc/photomaker"),
+}
+
+# Видеоны мүлдем өшіру керек болса: DISABLE_VIDEO=1
+DISABLE_VIDEO = os.environ.get("DISABLE_VIDEO", "").strip() in ("1", "true", "yes")
+
+DEFAULT_LANG = os.environ.get("DEFAULT_LANG", "kz")
+
+# SQLite дерекқор жолы (лимит/тіл сақтау үшін).
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "bot.db"))
