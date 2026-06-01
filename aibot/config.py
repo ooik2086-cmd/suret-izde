@@ -32,7 +32,7 @@ ADMIN_ID = _int("ADMIN_ID", 0)
 # МАҢЫЗДЫ: ақылы (Replicate) мүмкіндіктер әдепкіде 0 — олар тек сатып алынған
 # кредитпен істейді (зиянсыз). Сурет тегін (Pollinations, шығын $0).
 LIMITS = {
-    "image":   _int("LIMIT_IMAGE", 5),
+    "image":   _int("LIMIT_IMAGE", 100),
     "combine": _int("LIMIT_COMBINE", 0),
     "animate": _int("LIMIT_ANIMATE", 0),
 }

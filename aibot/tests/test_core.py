@@ -53,7 +53,7 @@ def test_limit_counts_and_blocks(tmpdb):
     uid = 222
     # Сурет — тегін лимитпен (әдепкі 5).
     ok, used, limit = tmpdb.can_use(uid, "image")
-    assert ok and used == 0 and limit == 5
+    assert ok and used == 0 and limit == 100
     tmpdb.record_use(uid, "image")
     ok, used, _ = tmpdb.can_use(uid, "image")
     assert ok and used == 1
@@ -65,7 +65,7 @@ def test_limit_counts_and_blocks(tmpdb):
 def test_usage_summary_shape(tmpdb):
     s = tmpdb.usage_summary(333)
     assert {"image", "combine", "animate"} <= set(s.keys())
-    assert s["image"].endswith("/5")
+    assert s["image"].endswith("/100")
 
 
 # ─────────────────────────── db: кредиттер (төлем) ───────────────────────────
