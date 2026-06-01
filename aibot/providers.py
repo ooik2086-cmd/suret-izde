@@ -153,7 +153,8 @@ class FreeProvider:
 
     available = True
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None,
+                       images=None, width=1024, height=1024):
         if mode == "image":
             en = await enhance_prompt(prompt)  # түзейді+аударады+толықтырады
             urls = []
@@ -161,8 +162,8 @@ class FreeProvider:
                 seed = random.randint(1, 10_000_000)
                 urls.append(
                     "https://image.pollinations.ai/prompt/%s"
-                    "?width=1024&height=1024&model=flux&nologo=true&seed=%d"
-                    % (quote(en)[:1500], seed))
+                    "?width=%d&height=%d&model=flux&nologo=true&seed=%d"
+                    % (quote(en)[:1500], width, height, seed))
             return GenResult("image", url=urls[0], urls=urls)
         # Қалған режимдер нақты AI кілтін қажет етеді.
         return GenResult("text", note="needs_token")
@@ -196,9 +197,10 @@ class HybridProvider:
         self._free = FreeProvider()
         self._replicate = ReplicateProvider() if REPLICATE_API_TOKEN else None
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None,
+                       images=None, width=1024, height=1024):
         if mode == "image":
-            return await self._free.generate(mode, prompt=prompt)
+            return await self._free.generate(mode, prompt=prompt, width=width, height=height)
         if self._replicate is not None:
             return await self._replicate.generate(
                 mode, prompt=prompt, image_bytes=image_bytes,

@@ -47,6 +47,8 @@ animate_video = {}
 # "combine": бірнеше сурет жинаймыз (user_id → [байт]) + қосымша нұсқау.
 combine_images = {}
 combine_prompt = {}
+# Сурет форматы (user_id → (ені, биіктігі)). Әдепкі 1:1.
+user_format = {}
 
 provider = get_provider()
 
@@ -71,6 +73,22 @@ def combine_menu(lang):
         [InlineKeyboardButton(text=t(lang, "combine_btn"), callback_data="combine_go")],
         [InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")],
     ])
+
+
+def format_menu(lang):
+    # Форматтарды 2 баған етіп көрсетеміз (1:1, 9:16, 16:9, ...).
+    icons = {"1x1": "⬜", "9x16": "📱", "16x9": "🖥️", "4x5": "🖼️", "3x4": "📷", "4x3": "🏞️"}
+    rows, row = [], []
+    for key in config.FORMAT_ORDER:
+        label = "%s %s" % (icons.get(key, ""), key.replace("x", ":"))
+        row.append(InlineKeyboardButton(text=label, callback_data="fmt:" + key))
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    rows.append([InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def sub_name(lang, days):
@@ -231,12 +249,26 @@ async def on_mode(c: CallbackQuery):
     animate_video.pop(uid, None)
     combine_images.pop(uid, None)
     combine_prompt.pop(uid, None)
-    ask = {
-        "image": "ask_prompt_image",
-        "combine": "ask_combine",
-        "animate": "ask_animate_video",
-    }[mode]
+    if mode == "image":
+        # Алдымен формат сұраймыз (1:1, 9:16, ...).
+        await c.message.edit_text(t(lang, "ask_format"), reply_markup=format_menu(lang))
+        await c.answer()
+        return
+    ask = {"combine": "ask_combine", "animate": "ask_animate_video"}[mode]
     await c.message.edit_text(t(lang, ask), reply_markup=back_menu(lang))
+    await c.answer()
+
+
+@dp.callback_query(F.data.startswith("fmt:"))
+async def on_format(c: CallbackQuery):
+    lang = db.get_lang(c.from_user.id)
+    key = c.data.split(":", 1)[1]
+    if key in config.FORMATS:
+        user_format[c.from_user.id] = config.FORMATS[key]
+        user_mode[c.from_user.id] = "image"
+        await c.message.edit_text(
+            t(lang, "ask_prompt_image_fmt", fmt=key.replace("x", ":")),
+            reply_markup=back_menu(lang))
     await c.answer()
 
 
@@ -246,7 +278,8 @@ async def on_text(m: Message):
     uid = m.from_user.id
     mode = user_mode.get(uid)
     if mode == "image":
-        await run_generation(m, lang, "image", prompt=m.text.strip())
+        w, h = user_format.get(uid, (1024, 1024))
+        await run_generation(m, lang, "image", prompt=m.text.strip(), width=w, height=h)
     elif mode == "combine":
         combine_prompt[uid] = m.text.strip()  # қосымша нұсқау (міндетті емес)
         await m.answer(t(lang, "combine_got_prompt"), reply_markup=combine_menu(lang))
@@ -353,7 +386,7 @@ async def mux_audio(video_url, driving_bytes):
 
 # ─────────────────────────── генерация ───────────────────────────
 async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None,
-                         video_bytes=None, images=None, uid=None):
+                         video_bytes=None, images=None, uid=None, width=1024, height=1024):
     if uid is None:
         uid = m.from_user.id
     # charge: нәтиже сәтті болғанда нені есептейміз — "limit" | None
@@ -377,7 +410,7 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None,
     try:
         res = await provider.generate(
             mode, prompt=prompt, image_bytes=image_bytes,
-            video_bytes=video_bytes, images=images)
+            video_bytes=video_bytes, images=images, width=width, height=height)
     except Exception as e:  # noqa: BLE001
         log.exception("generation failed: %s", e)
         await status.edit_text(t(lang, "error"), reply_markup=main_menu(lang))
