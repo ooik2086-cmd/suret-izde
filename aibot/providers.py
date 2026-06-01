@@ -82,13 +82,15 @@ async def enhance_prompt(text):
 
 
 # Модельдер нақты ту/логотипті сала алмайды — атауды сипаттамаға ауыстырамыз.
-_KZ_FLAG = ("a sky-blue flag with a golden sun with rays above a golden soaring "
-            "steppe eagle and a vertical golden national ornament band on the left")
+_KZ_FLAG = ("the flag of Kazakhstan: a bright turquoise-cyan flag (sky-blue, not green, "
+            "not teal), with ONE single centered golden sun with 32 straight rays, ONE "
+            "single golden soaring steppe eagle directly beneath the sun, and a vertical "
+            "golden Kazakh ornament strip along the left edge")
 
 
 def _fix_symbols(prompt):
     low = prompt.lower()
-    if "kazakh" in low and "sky-blue flag" not in low:
+    if "kazakh" in low and "32 straight rays" not in low:
         prompt += ", " + _KZ_FLAG
     return prompt
 
