@@ -78,6 +78,7 @@ async def enhance_prompt(text):
 from config import (
     ANIMATE_IMAGE_FIELD,
     ANIMATE_VIDEO_FIELD,
+    COMBINE_IMAGE_FIELD,
     IMAGE_VARIANTS,
     MODELS,
     REPLICATE_API_TOKEN,
@@ -107,20 +108,15 @@ def _first_url(out):
     return getattr(out, "url", None) or str(out)
 
 
-def _build_input(mode, prompt, image_bytes, video_bytes=None):
+def _build_input(mode, prompt, image_bytes, video_bytes=None, images=None):
     """Әр режимге Replicate кіріс параметрлерін құрастыру."""
     if mode == "image":
         return {"prompt": prompt}
-    if mode == "video":
-        return {"prompt": prompt}
-    if mode == "restore":
-        return {"img": io.BytesIO(image_bytes), "version": "v1.4", "scale": 2}
-    if mode == "avatar":
-        return {
-            "input_image": io.BytesIO(image_bytes),
-            "prompt": prompt or "professional studio portrait, clean background, sharp focus",
-            "num_outputs": 1,
-        }
+    if mode == "combine":
+        # 2-3 суретті біріктіру/өңдеу. Суреттер тізіммен беріледі.
+        inp = {COMBINE_IMAGE_FIELD: [io.BytesIO(b) for b in (images or [])]}
+        inp["prompt"] = prompt or "combine these images into one cohesive image"
+        return inp
     if mode == "animate":
         # Сурет (кейіпкер) + видео (қозғалыс) → жандандырылған видео.
         return {
@@ -133,11 +129,11 @@ def _build_input(mode, prompt, image_bytes, video_bytes=None):
 class ReplicateProvider:
     available = True
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
         import replicate  # кешіктірілген импорт
 
         model = MODELS[mode]
-        inp = _build_input(mode, prompt, image_bytes, video_bytes)
+        inp = _build_input(mode, prompt, image_bytes, video_bytes, images)
         out = await asyncio.to_thread(replicate.run, model, input=inp)
         url = _first_url(out)
         if not url:
@@ -157,7 +153,7 @@ class FreeProvider:
 
     available = True
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
         if mode == "image":
             en = await enhance_prompt(prompt)  # түзейді+аударады+толықтырады
             urls = []
@@ -177,7 +173,7 @@ class DemoProvider:
 
     available = False
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
         await asyncio.sleep(0.1)
         seed = abs(hash((mode, prompt or "", len(image_bytes or b"")))) % 1000
         url = "https://picsum.photos/seed/%d/768/768" % seed
@@ -200,12 +196,13 @@ class HybridProvider:
         self._free = FreeProvider()
         self._replicate = ReplicateProvider() if REPLICATE_API_TOKEN else None
 
-    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None, images=None):
         if mode == "image":
             return await self._free.generate(mode, prompt=prompt)
         if self._replicate is not None:
             return await self._replicate.generate(
-                mode, prompt=prompt, image_bytes=image_bytes, video_bytes=video_bytes)
+                mode, prompt=prompt, image_bytes=image_bytes,
+                video_bytes=video_bytes, images=images)
         return GenResult("text", note="needs_token")
 
 

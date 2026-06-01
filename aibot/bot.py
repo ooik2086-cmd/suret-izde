@@ -39,13 +39,13 @@ log = logging.getLogger("aibot")
 # Пайдаланушы соңғы таңдаған режим (жадыда; қайта іске қосылса нөлденеді).
 user_mode = {}
 
-PROMPT_MODES = {"image", "video"}   # мәтін сұрайтын режимдер
-PHOTO_MODES = {"restore", "avatar"}  # бір фото сұрайтын режимдер
 # Ақылы (Replicate) режимдер — тек сатып алынған кредитпен істейді (зиянсыз).
-PAID_MODES = {"video", "restore", "avatar", "animate"}
-# "animate" режимі екі қадамды: алдымен фото, сосын видео. Аралық фотоны
-# осында сақтаймыз (user_id → сурет байттары).
+PAID_MODES = {"combine", "animate"}
+# "animate": алдымен сурет, сосын видео. Аралық фото осында (user_id → байт).
 animate_image = {}
+# "combine": бірнеше сурет жинаймыз (user_id → [байт]) + қосымша нұсқау.
+combine_images = {}
+combine_prompt = {}
 
 provider = get_provider()
 
@@ -54,12 +54,7 @@ provider = get_provider()
 def main_menu(lang):
     rows = [
         [InlineKeyboardButton(text=t(lang, "menu_image"), callback_data="m:image")],
-    ]
-    if not config.DISABLE_VIDEO:
-        rows.append([InlineKeyboardButton(text=t(lang, "menu_video"), callback_data="m:video")])
-    rows += [
-        [InlineKeyboardButton(text=t(lang, "menu_restore"), callback_data="m:restore")],
-        [InlineKeyboardButton(text=t(lang, "menu_avatar"), callback_data="m:avatar")],
+        [InlineKeyboardButton(text=t(lang, "menu_combine"), callback_data="m:combine")],
         [InlineKeyboardButton(text=t(lang, "menu_animate"), callback_data="m:animate")],
         [InlineKeyboardButton(text=t(lang, "menu_buy"), callback_data="buy")],
         [
@@ -68,6 +63,13 @@ def main_menu(lang):
         ],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def combine_menu(lang):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "combine_btn"), callback_data="combine_go")],
+        [InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")],
+    ])
 
 
 def sub_name(lang, days):
@@ -150,8 +152,8 @@ async def on_setlang(c: CallbackQuery):
 async def on_balance(c: CallbackQuery):
     lang = db.get_lang(c.from_user.id)
     s = db.usage_summary(c.from_user.id)
-    text = t(lang, "balance", image=s["image"], video=s["video"],
-             restore=s["restore"], avatar=s["avatar"])
+    text = t(lang, "balance", image=s["image"], combine=s["combine"],
+             animate=s["animate"])
     text += "\n" + t(lang, "credits_left", n=db.get_credits(c.from_user.id))
     if db.is_subscribed(c.from_user.id):
         until = db.sub_until(c.from_user.id).date().isoformat()
@@ -227,15 +229,16 @@ async def on_paid(m: Message):
 @dp.callback_query(F.data.startswith("m:"))
 async def on_mode(c: CallbackQuery):
     lang = db.get_lang(c.from_user.id)
+    uid = c.from_user.id
     mode = c.data.split(":", 1)[1]
-    if mode == "video" and config.DISABLE_VIDEO:
-        await c.answer(t(lang, "video_disabled"), show_alert=True)
-        return
-    user_mode[c.from_user.id] = mode
-    animate_image.pop(c.from_user.id, None)  # жаңа режим — ескі аралық фотоны тазалаймыз
+    user_mode[uid] = mode
+    # Жаңа режим — ескі аралық деректерді тазалаймыз.
+    animate_image.pop(uid, None)
+    combine_images.pop(uid, None)
+    combine_prompt.pop(uid, None)
     ask = {
-        "image": "ask_prompt_image", "video": "ask_prompt_video",
-        "restore": "ask_photo_restore", "avatar": "ask_photo_avatar",
+        "image": "ask_prompt_image",
+        "combine": "ask_combine",
         "animate": "ask_animate_photo",
     }[mode]
     await c.message.edit_text(t(lang, ask), reply_markup=back_menu(lang))
@@ -245,11 +248,15 @@ async def on_mode(c: CallbackQuery):
 @dp.message(F.text & ~F.text.startswith("/"))
 async def on_text(m: Message):
     lang = db.get_lang(m.from_user.id)
-    mode = user_mode.get(m.from_user.id)
-    if mode not in PROMPT_MODES:
+    uid = m.from_user.id
+    mode = user_mode.get(uid)
+    if mode == "image":
+        await run_generation(m, lang, "image", prompt=m.text.strip())
+    elif mode == "combine":
+        combine_prompt[uid] = m.text.strip()  # қосымша нұсқау (міндетті емес)
+        await m.answer(t(lang, "combine_got_prompt"), reply_markup=combine_menu(lang))
+    else:
         await m.answer(t(lang, "need_pick_mode"), reply_markup=main_menu(lang))
-        return
-    await run_generation(m, lang, mode, prompt=m.text.strip())
 
 
 @dp.message(F.photo)
@@ -263,10 +270,28 @@ async def on_photo(m: Message):
         animate_image[uid] = buf.read()
         await m.answer(t(lang, "ask_animate_video"), reply_markup=back_menu(lang))
         return
-    if mode not in PHOTO_MODES:
-        await m.answer(t(lang, "need_pick_mode"), reply_markup=main_menu(lang))
+    if mode == "combine":
+        imgs = combine_images.setdefault(uid, [])
+        imgs.append(buf.read())
+        await m.answer(t(lang, "combine_count", n=len(imgs)),
+                       reply_markup=combine_menu(lang))
         return
-    await run_generation(m, lang, mode, image_bytes=buf.read())
+    await m.answer(t(lang, "need_pick_mode"), reply_markup=main_menu(lang))
+
+
+@dp.callback_query(F.data == "combine_go")
+async def on_combine_go(c: CallbackQuery):
+    lang = db.get_lang(c.from_user.id)
+    uid = c.from_user.id
+    imgs = combine_images.get(uid, [])
+    if len(imgs) < 2:
+        await c.answer(t(lang, "combine_need_more"), show_alert=True)
+        return
+    await c.answer()
+    prompt = combine_prompt.pop(uid, None)
+    combine_images.pop(uid, None)
+    await run_generation(c.message, lang, "combine", images=imgs[:3],
+                         prompt=prompt, uid=uid)
 
 
 @dp.message(F.video | F.animation | F.video_note | F.document)
@@ -297,8 +322,10 @@ async def on_unknown_cmd(m: Message):
 
 
 # ─────────────────────────── генерация ───────────────────────────
-async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, video_bytes=None):
-    uid = m.from_user.id
+async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None,
+                         video_bytes=None, images=None, uid=None):
+    if uid is None:
+        uid = m.from_user.id
     # charge: нәтиже сәтті болғанда нені есептейміз — "credit" | "limit" | None
     charge = None
     if mode in PAID_MODES:
@@ -320,7 +347,8 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, 
     status = await m.answer(t(lang, "working"))
     try:
         res = await provider.generate(
-            mode, prompt=prompt, image_bytes=image_bytes, video_bytes=video_bytes)
+            mode, prompt=prompt, image_bytes=image_bytes,
+            video_bytes=video_bytes, images=images)
     except Exception as e:  # noqa: BLE001
         log.exception("generation failed: %s", e)
         await status.edit_text(t(lang, "error"), reply_markup=main_menu(lang))

@@ -64,7 +64,7 @@ def test_limit_counts_and_blocks(tmpdb):
 
 def test_usage_summary_shape(tmpdb):
     s = tmpdb.usage_summary(333)
-    assert {"image", "video", "restore", "avatar", "animate"} <= set(s.keys())
+    assert {"image", "combine", "animate"} <= set(s.keys())
     assert s["image"].endswith("/5")
 
 
@@ -109,10 +109,10 @@ def test_free_provider_real_image_url():
     assert res.note == ""  # тегін режимде сурет — нақты генерация
 
 
-def test_free_provider_other_modes_need_token():
+def test_free_provider_paid_modes_need_token():
     import asyncio
     import providers
-    for mode in ("video", "restore", "avatar", "animate"):
+    for mode in ("combine", "animate"):
         res = asyncio.run(providers.FreeProvider().generate(mode, prompt="x"))
         assert res.note == "needs_token"
 
@@ -125,9 +125,18 @@ def test_build_input_animate_uses_configured_fields():
     assert config.ANIMATE_VIDEO_FIELD in inp
 
 
-def test_animate_in_limits():
+def test_build_input_combine_passes_images():
+    import providers
     import config
-    assert "animate" in config.LIMITS
+    inp = providers._build_input("combine", "merge", None, images=[b"a", b"b"])
+    assert config.COMBINE_IMAGE_FIELD in inp
+    assert len(inp[config.COMBINE_IMAGE_FIELD]) == 2
+    assert inp["prompt"] == "merge"
+
+
+def test_modes_in_limits():
+    import config
+    assert {"image", "combine", "animate"} <= set(config.LIMITS)
 
 
 def test_demo_provider_returns_placeholder():

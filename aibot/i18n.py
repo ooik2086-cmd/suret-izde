@@ -10,17 +10,23 @@ T = {
         "welcome": (
             "👋 Сәлем! Мен — AI-генератор ботымын.\n\n"
             "Не істей аламын:\n"
-            "🖼️ Мәтіннен сурет жасау\n"
-            "🎬 Мәтіннен қысқа видео жасау\n"
-            "🪄 Ескі/бұзылған фотоны жаңарту\n"
-            "🧑‍💼 Селфиден кәсіби портрет (аватар)\n\n"
+            "🖼️ Мәтіннен сурет жасау (3 нұсқа)\n"
+            "🧩 2-3 суретті біріктіру/өңдеу\n"
+            "🎭 Суретті видеодағыдай жандандыру\n\n"
+            "Қазақша/орысша жаза беріңіз — қалғанын өзім істеймін.\n"
             "Төмендегі батырмадан керегін таңдаңыз 👇"
         ),
         "menu_image": "🖼️ Сурет жасау",
+        "menu_combine": "🧩 Суреттерді біріктіру",
         "menu_video": "🎬 Видео жасау",
         "menu_restore": "🪄 Фото жаңарту",
         "menu_avatar": "🧑‍💼 Аватар жасау",
         "menu_animate": "🎭 Суретті жандандыру",
+        "ask_combine": "🧩 2-3 суретті бір-бірлеп жіберіңіз. Қаласаңыз нұсқау жазыңыз (мыс. «екеуін біріктір» немесе «1-шіні 2-шінің түрімен жаса»). Сосын «Біріктіру» басыңыз.",
+        "combine_count": "✅ {n} сурет қабылданды. Тағы жіберіңіз немесе «Біріктіру» басыңыз.",
+        "combine_got_prompt": "✍️ Нұсқау сақталды. Енді 2-3 сурет жіберіп, «Біріктіру» басыңыз.",
+        "combine_need_more": "Кемінде 2 сурет керек.",
+        "combine_btn": "🧩 Біріктіру",
         "menu_balance": "📊 Менің лимитім",
         "menu_lang": "🌐 Тіл",
         "ask_prompt_image": "✍️ Қандай сурет керек? Сипаттап жазыңыз (мысалы: «тауда тұрған ақ бөкен, күн батып барады»).",
@@ -33,7 +39,7 @@ T = {
         "working": "⏳ Жасап жатырмын... біраз күте тұрыңыз (видео ұзағырақ).",
         "done": "✅ Дайын!",
         "limit_hit": "🚫 Бүгінгі тегін лимит бітті ({mode}: {used}/{limit}).\n\n💎 «Сатып алу» арқылы қосымша генерация алыңыз немесе ертең қайта көріңіз.",
-        "balance": "📊 Бүгінгі қолдану:\n🖼️ Сурет: {image}\n🎬 Видео: {video}\n🪄 Жаңарту: {restore}\n🧑‍💼 Аватар: {avatar}",
+        "balance": "📊 Бүгінгі қолдану:\n🖼️ Сурет: {image}\n🧩 Біріктіру: {combine}\n🎭 Жандандыру: {animate}",
         "send_text_not_photo": "Алдымен мәзірден қызметті таңдаңыз 👇 (/start)",
         "send_photo_please": "Мәтін емес, фото жіберіңіз 📷",
         "need_pick_mode": "Алдымен мәзірден не істейтінімізді таңдаңыз 👇",
@@ -63,17 +69,23 @@ T = {
         "welcome": (
             "👋 Привет! Я — бот AI-генератор.\n\n"
             "Что умею:\n"
-            "🖼️ Создавать изображения по тексту\n"
-            "🎬 Делать короткие видео по тексту\n"
-            "🪄 Восстанавливать старые/повреждённые фото\n"
-            "🧑‍💼 Профессиональный портрет из селфи (аватар)\n\n"
+            "🖼️ Создавать изображения по тексту (3 варианта)\n"
+            "🧩 Объединять/редактировать 2-3 фото\n"
+            "🎭 Оживлять фото как в видео\n\n"
+            "Пишите на казахском/русском — остальное сделаю сам.\n"
             "Выберите нужное кнопкой ниже 👇"
         ),
         "menu_image": "🖼️ Сделать фото",
+        "menu_combine": "🧩 Объединить фото",
         "menu_video": "🎬 Сделать видео",
         "menu_restore": "🪄 Восстановить фото",
         "menu_avatar": "🧑‍💼 Создать аватар",
         "menu_animate": "🎭 Оживить фото",
+        "ask_combine": "🧩 Пришлите 2-3 фото по одному. По желанию напишите инструкцию (напр. «объедини оба» или «сделай 1-е в стиле 2-го»). Затем нажмите «Объединить».",
+        "combine_count": "✅ Принято фото: {n}. Пришлите ещё или нажмите «Объединить».",
+        "combine_got_prompt": "✍️ Инструкция сохранена. Теперь пришлите 2-3 фото и нажмите «Объединить».",
+        "combine_need_more": "Нужно минимум 2 фото.",
+        "combine_btn": "🧩 Объединить",
         "menu_balance": "📊 Мой лимит",
         "menu_lang": "🌐 Язык",
         "ask_prompt_image": "✍️ Какое изображение нужно? Опишите (например: «белая антилопа в горах на закате»).",
@@ -86,7 +98,7 @@ T = {
         "working": "⏳ Генерирую... подождите немного (видео дольше).",
         "done": "✅ Готово!",
         "limit_hit": "🚫 Дневной бесплатный лимит исчерпан ({mode}: {used}/{limit}).\n\n💎 Нажмите «Купить», чтобы получить дополнительные генерации, или попробуйте завтра.",
-        "balance": "📊 Сегодня использовано:\n🖼️ Фото: {image}\n🎬 Видео: {video}\n🪄 Восстановление: {restore}\n🧑‍💼 Аватар: {avatar}",
+        "balance": "📊 Сегодня использовано:\n🖼️ Фото: {image}\n🧩 Объединение: {combine}\n🎭 Оживление: {animate}",
         "send_text_not_photo": "Сначала выберите услугу в меню 👇 (/start)",
         "send_photo_please": "Пришлите фото, а не текст 📷",
         "need_pick_mode": "Сначала выберите в меню, что делаем 👇",
@@ -116,17 +128,23 @@ T = {
         "welcome": (
             "👋 Hi! I'm an AI generator bot.\n\n"
             "What I can do:\n"
-            "🖼️ Create images from text\n"
-            "🎬 Make short videos from text\n"
-            "🪄 Restore old/damaged photos\n"
-            "🧑‍💼 Professional portrait from a selfie (avatar)\n\n"
+            "🖼️ Create images from text (3 options)\n"
+            "🧩 Combine/edit 2-3 photos\n"
+            "🎭 Animate a photo like in a video\n\n"
+            "Write in Kazakh/Russian — I'll do the rest.\n"
             "Pick what you need with a button below 👇"
         ),
         "menu_image": "🖼️ Make image",
+        "menu_combine": "🧩 Combine photos",
         "menu_video": "🎬 Make video",
         "menu_restore": "🪄 Restore photo",
         "menu_avatar": "🧑‍💼 Create avatar",
         "menu_animate": "🎭 Animate photo",
+        "ask_combine": "🧩 Send 2-3 photos one by one. Optionally add an instruction (e.g. 'combine both' or 'make the 1st in the style of the 2nd'). Then tap 'Combine'.",
+        "combine_count": "✅ Photos received: {n}. Send more or tap 'Combine'.",
+        "combine_got_prompt": "✍️ Instruction saved. Now send 2-3 photos and tap 'Combine'.",
+        "combine_need_more": "At least 2 photos are needed.",
+        "combine_btn": "🧩 Combine",
         "menu_balance": "📊 My limit",
         "menu_lang": "🌐 Language",
         "ask_prompt_image": "✍️ What image do you want? Describe it (e.g. 'a white antelope in the mountains at sunset').",
@@ -139,7 +157,7 @@ T = {
         "working": "⏳ Working on it... please wait a bit (video takes longer).",
         "done": "✅ Done!",
         "limit_hit": "🚫 Today's free limit is used up ({mode}: {used}/{limit}).\n\n💎 Tap 'Buy' for extra generations, or try again tomorrow.",
-        "balance": "📊 Used today:\n🖼️ Image: {image}\n🎬 Video: {video}\n🪄 Restore: {restore}\n🧑‍💼 Avatar: {avatar}",
+        "balance": "📊 Used today:\n🖼️ Image: {image}\n🧩 Combine: {combine}\n🎭 Animate: {animate}",
         "send_text_not_photo": "First pick a service in the menu 👇 (/start)",
         "send_photo_please": "Send a photo, not text 📷",
         "need_pick_mode": "First choose what to do from the menu 👇",

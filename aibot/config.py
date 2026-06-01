@@ -33,21 +33,21 @@ ADMIN_ID = _int("ADMIN_ID", 0)
 # кредитпен істейді (зиянсыз). Сурет тегін (Pollinations, шығын $0).
 LIMITS = {
     "image":   _int("LIMIT_IMAGE", 5),
-    "video":   _int("LIMIT_VIDEO", 0),
-    "restore": _int("LIMIT_RESTORE", 0),
-    "avatar":  _int("LIMIT_AVATAR", 0),
+    "combine": _int("LIMIT_COMBINE", 0),
     "animate": _int("LIMIT_ANIMATE", 0),
 }
 
 # ── Replicate модельдері (керек болса env-пен ауыстырыңыз) ──
 MODELS = {
     "image":   os.environ.get("MODEL_IMAGE",   "black-forest-labs/flux-schnell"),
-    "video":   os.environ.get("MODEL_VIDEO",   "minimax/video-01"),
-    "restore": os.environ.get("MODEL_RESTORE", "tencentarc/gfpgan"),
-    "avatar":  os.environ.get("MODEL_AVATAR",  "tencentarc/photomaker"),
+    # 2-3 суретті біріктіру/өңдеу (multi-image edit).
+    "combine": os.environ.get("MODEL_COMBINE", "qwen/qwen-image-edit"),
     # Суреттегі кейіпкерді видеодағы қозғалыспен жандандыру (image + driving video).
     "animate": os.environ.get("MODEL_ANIMATE", "fofr/live-portrait"),
 }
+
+# "combine" моделіне суреттер қай өріспен берілетіні (модельге қарай реттеңіз).
+COMBINE_IMAGE_FIELD = os.environ.get("COMBINE_IMAGE_FIELD", "image")
 
 # "animate" моделінің кіріс өріс атаулары (модель бойынша өзгеше болуы мүмкін —
 # env арқылы реттеңіз). fofr/live-portrait: face_image + driving_video.
