@@ -25,10 +25,11 @@ def tmpdb(tmp_path, monkeypatch):
 
 
 # ─────────────────────────── i18n ───────────────────────────
-def test_i18n_all_keys_present_in_both_langs():
+def test_i18n_all_keys_present_in_all_langs():
     import i18n
-    kz, ru = set(i18n.T["kz"]), set(i18n.T["ru"])
-    assert kz == ru, "KZ/RU кілттері сәйкес келмейді: %s" % (kz ^ ru)
+    kz, ru, en = set(i18n.T["kz"]), set(i18n.T["ru"]), set(i18n.T["en"])
+    assert kz == ru, "KZ/RU сәйкес емес: %s" % (kz ^ ru)
+    assert kz == en, "KZ/EN сәйкес емес: %s" % (kz ^ en)
 
 
 def test_i18n_format_and_fallback():

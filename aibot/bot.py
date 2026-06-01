@@ -20,6 +20,7 @@ from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
     LabeledPrice,
     Message,
     PreCheckoutQuery,
@@ -102,6 +103,7 @@ def lang_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🇰🇿 Қазақша", callback_data="setlang:kz")],
         [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="setlang:ru")],
+        [InlineKeyboardButton(text="🇬🇧 English", callback_data="setlang:en")],
     ])
 
 
@@ -340,6 +342,11 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, 
     try:
         if res.kind == "video":
             await m.answer_video(res.url, caption=caption)
+        elif len(res.urls) > 1:
+            # Бірнеше сурет нұсқасы — қатар (альбоммен) жіберіледі.
+            media = [InputMediaPhoto(media=u) for u in res.urls]
+            media[0].caption = caption
+            await m.answer_media_group(media)
         else:
             await m.answer_photo(res.url, caption=caption)
         await status.delete()

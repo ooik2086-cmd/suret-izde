@@ -110,6 +110,59 @@ T = {
         "pay_success": "✅ Оплата успешна! Добавлено +{n} генераций. Спасибо! 🎉",
         "back": "⬅️ Меню",
     },
+    "en": {
+        "lang_name": "🇬🇧 English",
+        "choose_lang": "Тілді таңдаңыз / Выберите язык / Choose language:",
+        "welcome": (
+            "👋 Hi! I'm an AI generator bot.\n\n"
+            "What I can do:\n"
+            "🖼️ Create images from text\n"
+            "🎬 Make short videos from text\n"
+            "🪄 Restore old/damaged photos\n"
+            "🧑‍💼 Professional portrait from a selfie (avatar)\n\n"
+            "Pick what you need with a button below 👇"
+        ),
+        "menu_image": "🖼️ Make image",
+        "menu_video": "🎬 Make video",
+        "menu_restore": "🪄 Restore photo",
+        "menu_avatar": "🧑‍💼 Create avatar",
+        "menu_animate": "🎭 Animate photo",
+        "menu_balance": "📊 My limit",
+        "menu_lang": "🌐 Language",
+        "ask_prompt_image": "✍️ What image do you want? Describe it (e.g. 'a white antelope in the mountains at sunset').",
+        "ask_prompt_video": "✍️ What video do you want? Describe it (keep it short).",
+        "ask_photo_restore": "📷 Send the old/blurry photo to restore.",
+        "ask_photo_avatar": "📷 Send a selfie with a clear face — I'll make a professional portrait.",
+        "ask_animate_photo": "🎭 Step 1/2: send the photo to animate (the person's/character's face should be clear).",
+        "ask_animate_video": "🎬 Step 2/2: now send a short motion video (5-10 sec, up to 20 MB). The character in the photo will repeat that motion.",
+        "video_too_big": "⚠️ The video is too big. A Telegram bot can only download up to 20 MB — send a shorter/smaller one.",
+        "working": "⏳ Working on it... please wait a bit (video takes longer).",
+        "done": "✅ Done!",
+        "limit_hit": "🚫 Today's free limit is used up ({mode}: {used}/{limit}).\n\n💎 Tap 'Buy' for extra generations, or try again tomorrow.",
+        "balance": "📊 Used today:\n🖼️ Image: {image}\n🎬 Video: {video}\n🪄 Restore: {restore}\n🧑‍💼 Avatar: {avatar}",
+        "send_text_not_photo": "First pick a service in the menu 👇 (/start)",
+        "send_photo_please": "Send a photo, not text 📷",
+        "need_pick_mode": "First choose what to do from the menu 👇",
+        "error": "⚠️ Something went wrong, please try again later.",
+        "video_disabled": "🎬 Video is temporarily disabled.",
+        "demo_note": "⚙️ (Demo mode: real AI not connected yet. Add REPLICATE_API_TOKEN.)",
+        "needs_token": "🔒 This mode needs a real AI key. In free mode only image generation works (🖼️).",
+        "menu_buy": "💎 Buy",
+        "buy_title": "💎 Choose (pay via Telegram Stars):\n• Subscription — UNLIMITED images\n• Credits — video/animation/avatar (1 credit = 1 generation)",
+        "sub_week": "📅 1 week",
+        "sub_month": "📆 1 month",
+        "sub_invoice_title": "{name} subscription",
+        "sub_invoice_desc": "Unlimited IMAGE generation for the '{name}' period.",
+        "pay_success_sub": "✅ Payment successful! {name} subscription is active — unlimited images! 🎉",
+        "sub_active": "💎 Subscription active until: {until}",
+        "need_credit": "🔒 This is a paid feature (video/animation/avatar/restore).\nTap '💎 Buy' and get credits (1 credit = 1 generation).",
+        "pkg_label": "{n} generations — {stars} ⭐",
+        "invoice_title": "{n} generations",
+        "invoice_desc": "{n} paid credits (video / animation / avatar / restore). 1 credit = 1 generation.",
+        "credits_left": "💎 Paid generations: {n}",
+        "pay_success": "✅ Payment successful! +{n} generations added. Thank you! 🎉",
+        "back": "⬅️ Menu",
+    },
 }
 
 

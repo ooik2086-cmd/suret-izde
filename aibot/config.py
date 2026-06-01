@@ -50,6 +50,9 @@ ANIMATE_VIDEO_FIELD = os.environ.get("ANIMATE_VIDEO_FIELD", "driving_video")
 # Видеоны мүлдем өшіру керек болса: DISABLE_VIDEO=1
 DISABLE_VIDEO = os.environ.get("DISABLE_VIDEO", "").strip() in ("1", "true", "yes")
 
+# Сурет режимінде бір сұранымға қанша нұсқа жасалады (тегін, қатар жіберіледі).
+IMAGE_VARIANTS = _int("IMAGE_VARIANTS", 3)
+
 # ── Telegram Stars пакеттері: (кредит_саны, жұлдыз_бағасы) ──
 # 1 кредит = 1 ақылы жасау (видео/жандандыру/аватар/жаңарту).
 # МАҢЫЗДЫ: бір кредит бағасы ең қымбат генерация құнынан (видео ~$0.5) жоғары

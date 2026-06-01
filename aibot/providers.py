@@ -40,9 +40,45 @@ async def translate_to_en(text):
     except Exception:
         return text
 
+
+async def enhance_prompt(text):
+    """Тапсырманы ақылды түрде ТҮЗЕП + ағылшыншаға АУДАРЫП + ТОЛЫҚТЫРАДЫ.
+    Тегін LLM (Pollinations text). Сәтсіз болса — жай аудармаға қайтады."""
+    text = (text or "").strip()
+    if not text:
+        return "beautiful art, highly detailed, 4k"
+    system = (
+        "You are an expert image-prompt engineer. The user's request may be in "
+        "Kazakh or Russian and may contain typos. Fix it, translate to English, "
+        "and rewrite it as ONE concise vivid English image-generation prompt with "
+        "useful visual detail and quality tags (lighting, style, 'highly detailed', "
+        "'4k'). Output ONLY the final prompt — no quotes, no explanation."
+    )
+    try:
+        payload = {
+            "model": "openai",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            "private": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=12)
+        async with aiohttp.ClientSession(timeout=timeout) as s:
+            async with s.post("https://text.pollinations.ai/openai", json=payload) as r:
+                data = await r.json(content_type=None)
+        out = (data["choices"][0]["message"]["content"] or "").strip().strip('"').strip()
+        if out and len(out) > 3:
+            return out[:1500]
+    except Exception:
+        pass
+    return await translate_to_en(text)  # фолбэк
+
+
 from config import (
     ANIMATE_IMAGE_FIELD,
     ANIMATE_VIDEO_FIELD,
+    IMAGE_VARIANTS,
     MODELS,
     REPLICATE_API_TOKEN,
 )
@@ -51,9 +87,10 @@ from config import (
 class GenResult:
     """Генерация нәтижесі."""
 
-    def __init__(self, kind, url=None, caption="", note=""):
+    def __init__(self, kind, url=None, caption="", note="", urls=None):
         self.kind = kind        # "image" | "video" | "text"
-        self.url = url          # дайын файл сілтемесі
+        self.url = url          # дайын файл сілтемесі (біреу)
+        self.urls = urls or ([url] if url else [])  # бірнеше нұсқа (альбом)
         self.caption = caption
         self.note = note        # қосымша ескертпе (мыс. демо)
 
@@ -122,12 +159,15 @@ class FreeProvider:
 
     async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
         if mode == "image":
-            en = await translate_to_en(prompt)
-            seed = random.randint(1, 10_000_000)
-            url = ("https://image.pollinations.ai/prompt/%s"
-                   "?width=1024&height=1024&model=flux&nologo=true&seed=%d"
-                   % (quote(en)[:1500], seed))
-            return GenResult("image", url=url)
+            en = await enhance_prompt(prompt)  # түзейді+аударады+толықтырады
+            urls = []
+            for _ in range(max(1, IMAGE_VARIANTS)):
+                seed = random.randint(1, 10_000_000)
+                urls.append(
+                    "https://image.pollinations.ai/prompt/%s"
+                    "?width=1024&height=1024&model=flux&nologo=true&seed=%d"
+                    % (quote(en)[:1500], seed))
+            return GenResult("image", url=urls[0], urls=urls)
         # Қалған режимдер нақты AI кілтін қажет етеді.
         return GenResult("text", note="needs_token")
 
