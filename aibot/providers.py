@@ -48,11 +48,17 @@ async def enhance_prompt(text):
     if not text:
         return "beautiful art, highly detailed, 4k"
     system = (
-        "You are an expert image-prompt engineer. The user's request may be in "
-        "Kazakh or Russian and may contain typos. Fix it, translate to English, "
-        "and rewrite it as ONE concise vivid English image-generation prompt with "
-        "useful visual detail and quality tags (lighting, style, 'highly detailed', "
-        "'4k'). Output ONLY the final prompt — no quotes, no explanation."
+        "You are an expert text-to-image prompt engineer. The user's request may be "
+        "in Kazakh or Russian with typos. Fix it, translate to English, and rewrite it "
+        "as ONE single concise vivid image prompt: a comma-separated visual description "
+        "(NOT a sentence, NOT an explanation). Add quality tags such as 'highly detailed, "
+        "sharp focus, 4k, professional, cinematic lighting'. "
+        "IMPORTANT: image models cannot render named national flags or logos correctly, "
+        "so if the user mentions one, REPLACE the name with an explicit visual description "
+        "of its exact colors and symbols. For the flag of Kazakhstan specifically, write: "
+        "'a sky-blue flag with a golden sun with rays in the center above a golden soaring "
+        "steppe eagle, and a vertical golden national ornament band along the left edge'. "
+        "Output ONLY the final prompt — no quotes, no preamble, no explanation."
     )
     try:
         payload = {
@@ -69,10 +75,22 @@ async def enhance_prompt(text):
                 data = await r.json(content_type=None)
         out = (data["choices"][0]["message"]["content"] or "").strip().strip('"').strip()
         if out and len(out) > 3:
-            return out[:1500]
+            return _fix_symbols(out[:1500])
     except Exception:
         pass
-    return await translate_to_en(text)  # фолбэк
+    return _fix_symbols(await translate_to_en(text))  # фолбэк
+
+
+# Модельдер нақты ту/логотипті сала алмайды — атауды сипаттамаға ауыстырамыз.
+_KZ_FLAG = ("a sky-blue flag with a golden sun with rays above a golden soaring "
+            "steppe eagle and a vertical golden national ornament band on the left")
+
+
+def _fix_symbols(prompt):
+    low = prompt.lower()
+    if "kazakh" in low and "sky-blue flag" not in low:
+        prompt += ", " + _KZ_FLAG
+    return prompt
 
 
 from config import (
