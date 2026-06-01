@@ -119,12 +119,25 @@ def test_demo_provider_returns_placeholder():
     assert res.kind == "image" and res.url.startswith("http") and res.note == "demo"
 
 
-def test_get_provider_free_without_token(monkeypatch):
+def test_get_provider_is_hybrid(monkeypatch):
     sys.modules.pop("config", None)
     sys.modules.pop("providers", None)
     monkeypatch.delenv("REPLICATE_API_TOKEN", raising=False)
     import providers
-    assert isinstance(providers.get_provider(), providers.FreeProvider)
+    assert isinstance(providers.get_provider(), providers.HybridProvider)
+
+
+def test_hybrid_image_is_free_other_needs_token(monkeypatch):
+    import asyncio
+    sys.modules.pop("config", None)
+    sys.modules.pop("providers", None)
+    monkeypatch.delenv("REPLICATE_API_TOKEN", raising=False)
+    import providers
+    p = providers.HybridProvider()
+    img = asyncio.run(p.generate("image", prompt="теңіз"))
+    assert img.url.startswith("https://image.pollinations.ai/prompt/")
+    vid = asyncio.run(p.generate("video", prompt="x"))
+    assert vid.note == "needs_token"
 
 
 def test_first_url_handles_list_and_object():

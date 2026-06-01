@@ -144,5 +144,30 @@ class DemoProvider:
         return GenResult("image", url=url, note="demo")
 
 
+class HybridProvider:
+    """Аралас режим (әдепкі).
+
+    • Сурет — әрқашан ТЕГІН (Pollinations, ақша/кредит қажет емес).
+    • Видео/жаңарту/аватар/жандандыру — Replicate (REPLICATE_API_TOKEN болса);
+      кілт жоқ болса "needs_token" қайтарады.
+
+    Осылай Replicate-те кредит болмаса да, бот сурет жасай береді.
+    """
+
+    available = True
+
+    def __init__(self):
+        self._free = FreeProvider()
+        self._replicate = ReplicateProvider() if REPLICATE_API_TOKEN else None
+
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
+        if mode == "image":
+            return await self._free.generate(mode, prompt=prompt)
+        if self._replicate is not None:
+            return await self._replicate.generate(
+                mode, prompt=prompt, image_bytes=image_bytes, video_bytes=video_bytes)
+        return GenResult("text", note="needs_token")
+
+
 def get_provider():
-    return ReplicateProvider() if REPLICATE_API_TOKEN else FreeProvider()
+    return HybridProvider()
