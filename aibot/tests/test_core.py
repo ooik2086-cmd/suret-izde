@@ -50,14 +50,15 @@ def test_lang_default_and_set(tmpdb):
 # ─────────────────────────── db: лимиттер ───────────────────────────
 def test_limit_counts_and_blocks(tmpdb):
     uid = 222
-    ok, used, limit = tmpdb.can_use(uid, "video")  # әдепкі лимит 1
-    assert ok and used == 0 and limit == 1
-    tmpdb.record_use(uid, "video")
-    ok, used, limit = tmpdb.can_use(uid, "video")
-    assert not ok and used == 1
-    # басқа режим бөлек есептеледі
-    ok2, _, _ = tmpdb.can_use(uid, "image")
-    assert ok2
+    # Сурет — тегін лимитпен (әдепкі 5).
+    ok, used, limit = tmpdb.can_use(uid, "image")
+    assert ok and used == 0 and limit == 5
+    tmpdb.record_use(uid, "image")
+    ok, used, _ = tmpdb.can_use(uid, "image")
+    assert ok and used == 1
+    # Ақылы режим (видео) — тегін лимит 0 (тек кредитпен).
+    okv, _, limv = tmpdb.can_use(uid, "video")
+    assert not okv and limv == 0
 
 
 def test_usage_summary_shape(tmpdb):

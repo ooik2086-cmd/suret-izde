@@ -39,6 +39,8 @@ user_mode = {}
 
 PROMPT_MODES = {"image", "video"}   # мәтін сұрайтын режимдер
 PHOTO_MODES = {"restore", "avatar"}  # бір фото сұрайтын режимдер
+# Ақылы (Replicate) режимдер — тек сатып алынған кредитпен істейді (зиянсыз).
+PAID_MODES = {"video", "restore", "avatar", "animate"}
 # "animate" режимі екі қадамды: алдымен фото, сосын видео. Аралық фотоны
 # осында сақтаймыз (user_id → сурет байттары).
 animate_image = {}
@@ -72,11 +74,18 @@ def sub_name(lang, days):
 
 
 def buy_menu(lang):
+    # Жазылым (шексіз сурет) + кредит пакеттері (ақылы видео/жандандыру т.б.)
     rows = [
         [InlineKeyboardButton(
             text="%s — %d ⭐" % (sub_name(lang, days), stars),
             callback_data="sub:%d" % days)]
         for days, stars in config.SUBSCRIPTIONS
+    ]
+    rows += [
+        [InlineKeyboardButton(
+            text=t(lang, "pkg_label", n=n, stars=stars),
+            callback_data="pkg:%d:%d" % (n, stars))]
+        for n, stars in config.PACKAGES
     ]
     rows.append([InlineKeyboardButton(text=t(lang, "back"), callback_data="menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -287,17 +296,23 @@ async def on_unknown_cmd(m: Message):
 # ─────────────────────────── генерация ───────────────────────────
 async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, video_bytes=None):
     uid = m.from_user.id
-    subscribed = db.is_subscribed(uid)  # жазылым белсенді болса — шексіз
-    use_paid = False
-    if not subscribed:
+    # charge: нәтиже сәтті болғанда нені есептейміз — "credit" | "limit" | None
+    charge = None
+    if mode in PAID_MODES:
+        # Ақылы режим: тек сатып алынған кредитпен (тегін/шексіз емес) → зиянсыз.
+        if db.get_credits(uid) <= 0:
+            await m.answer(t(lang, "need_credit"), reply_markup=limit_menu(lang))
+            return
+        charge = "credit"
+    elif db.is_subscribed(uid):
+        charge = None  # жазылым = шексіз сурет
+    else:
         ok, used, limit = db.can_use(uid, mode)
         if not ok:
-            if db.get_credits(uid) > 0:
-                use_paid = True  # тегін лимит бітті — төленген кредиттен аламыз
-            else:
-                await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
-                               reply_markup=limit_menu(lang))
-                return
+            await m.answer(t(lang, "limit_hit", mode=mode, used=used, limit=limit),
+                           reply_markup=limit_menu(lang))
+            return
+        charge = "limit"
 
     status = await m.answer(t(lang, "working"))
     try:
@@ -313,12 +328,10 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, 
         await status.edit_text(t(lang, "needs_token"), reply_markup=main_menu(lang))
         return
 
-    # Нәтиже сәтті — есептейміз. Жазылым болса — шектеусіз, есептемейміз.
-    if subscribed:
-        pass
-    elif use_paid:
+    # Нәтиже сәтті — енді ғана есептейміз (needs_token болса бұған жетпейді).
+    if charge == "credit":
         db.use_credit(uid)
-    else:
+    elif charge == "limit":
         db.record_use(uid, mode)
     caption = t(lang, "done")
     if res.note == "demo":
