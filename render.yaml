@@ -1,7 +1,34 @@
 services:
+  # 1) Суретпен/есіммен іздеу веб-қолданбасы
   - type: web
     name: suret-izde
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2
+
+  # 2) AI-генератор Telegram бот (aibot/)
+  - type: web
+    name: aibot
+    runtime: python
+    plan: free
+    rootDir: aibot
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      # Құпия мәндер: Render дашбордта сұрайды, репозиторийде САҚТАЛМАЙДЫ.
+      - key: BOT_TOKEN
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      # Тегін лимиттер (қаласаңыз дашбордта өзгертіңіз)
+      - key: LIMIT_IMAGE
+        value: "5"
+      - key: LIMIT_VIDEO
+        value: "1"
+      - key: LIMIT_RESTORE
+        value: "3"
+      - key: LIMIT_AVATAR
+        value: "3"
+      - key: DEFAULT_LANG
+        value: kz
