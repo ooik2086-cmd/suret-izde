@@ -28,6 +28,7 @@ LIMITS = {
     "video":   _int("LIMIT_VIDEO", 1),
     "restore": _int("LIMIT_RESTORE", 3),
     "avatar":  _int("LIMIT_AVATAR", 3),
+    "animate": _int("LIMIT_ANIMATE", 1),
 }
 
 # ── Replicate модельдері (керек болса env-пен ауыстырыңыз) ──
@@ -36,7 +37,14 @@ MODELS = {
     "video":   os.environ.get("MODEL_VIDEO",   "minimax/video-01"),
     "restore": os.environ.get("MODEL_RESTORE", "tencentarc/gfpgan"),
     "avatar":  os.environ.get("MODEL_AVATAR",  "tencentarc/photomaker"),
+    # Суреттегі кейіпкерді видеодағы қозғалыспен жандандыру (image + driving video).
+    "animate": os.environ.get("MODEL_ANIMATE", "fofr/live-portrait"),
 }
+
+# "animate" моделінің кіріс өріс атаулары (модель бойынша өзгеше болуы мүмкін —
+# env арқылы реттеңіз). fofr/live-portrait: face_image + driving_video.
+ANIMATE_IMAGE_FIELD = os.environ.get("ANIMATE_IMAGE_FIELD", "face_image")
+ANIMATE_VIDEO_FIELD = os.environ.get("ANIMATE_VIDEO_FIELD", "driving_video")
 
 # Видеоны мүлдем өшіру керек болса: DISABLE_VIDEO=1
 DISABLE_VIDEO = os.environ.get("DISABLE_VIDEO", "").strip() in ("1", "true", "yes")

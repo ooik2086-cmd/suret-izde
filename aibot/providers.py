@@ -40,7 +40,12 @@ async def translate_to_en(text):
     except Exception:
         return text
 
-from config import MODELS, REPLICATE_API_TOKEN
+from config import (
+    ANIMATE_IMAGE_FIELD,
+    ANIMATE_VIDEO_FIELD,
+    MODELS,
+    REPLICATE_API_TOKEN,
+)
 
 
 class GenResult:
@@ -65,7 +70,7 @@ def _first_url(out):
     return getattr(out, "url", None) or str(out)
 
 
-def _build_input(mode, prompt, image_bytes):
+def _build_input(mode, prompt, image_bytes, video_bytes=None):
     """Әр режимге Replicate кіріс параметрлерін құрастыру."""
     if mode == "image":
         return {"prompt": prompt}
@@ -79,22 +84,28 @@ def _build_input(mode, prompt, image_bytes):
             "prompt": prompt or "professional studio portrait, clean background, sharp focus",
             "num_outputs": 1,
         }
+    if mode == "animate":
+        # Сурет (кейіпкер) + видео (қозғалыс) → жандандырылған видео.
+        return {
+            ANIMATE_IMAGE_FIELD: io.BytesIO(image_bytes),
+            ANIMATE_VIDEO_FIELD: io.BytesIO(video_bytes),
+        }
     raise ValueError("белгісіз режим: %s" % mode)
 
 
 class ReplicateProvider:
     available = True
 
-    async def generate(self, mode, prompt=None, image_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
         import replicate  # кешіктірілген импорт
 
         model = MODELS[mode]
-        inp = _build_input(mode, prompt, image_bytes)
+        inp = _build_input(mode, prompt, image_bytes, video_bytes)
         out = await asyncio.to_thread(replicate.run, model, input=inp)
         url = _first_url(out)
         if not url:
             raise RuntimeError("модель бос нәтиже қайтарды")
-        kind = "video" if mode == "video" else "image"
+        kind = "video" if mode in ("video", "animate") else "image"
         return GenResult(kind, url=url)
 
 
@@ -109,7 +120,7 @@ class FreeProvider:
 
     available = True
 
-    async def generate(self, mode, prompt=None, image_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
         if mode == "image":
             en = await translate_to_en(prompt)
             seed = random.randint(1, 10_000_000)
@@ -126,7 +137,7 @@ class DemoProvider:
 
     available = False
 
-    async def generate(self, mode, prompt=None, image_bytes=None):
+    async def generate(self, mode, prompt=None, image_bytes=None, video_bytes=None):
         await asyncio.sleep(0.1)
         seed = abs(hash((mode, prompt or "", len(image_bytes or b"")))) % 1000
         url = "https://picsum.photos/seed/%d/768/768" % seed

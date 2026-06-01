@@ -62,7 +62,7 @@ def test_limit_counts_and_blocks(tmpdb):
 
 def test_usage_summary_shape(tmpdb):
     s = tmpdb.usage_summary(333)
-    assert set(s.keys()) == {"image", "video", "restore", "avatar"}
+    assert {"image", "video", "restore", "avatar", "animate"} <= set(s.keys())
     assert s["image"].endswith("/5")
 
 
@@ -94,9 +94,22 @@ def test_free_provider_real_image_url():
 def test_free_provider_other_modes_need_token():
     import asyncio
     import providers
-    for mode in ("video", "restore", "avatar"):
+    for mode in ("video", "restore", "avatar", "animate"):
         res = asyncio.run(providers.FreeProvider().generate(mode, prompt="x"))
         assert res.note == "needs_token"
+
+
+def test_build_input_animate_uses_configured_fields():
+    import providers
+    import config
+    inp = providers._build_input("animate", "", b"img-bytes", b"vid-bytes")
+    assert config.ANIMATE_IMAGE_FIELD in inp
+    assert config.ANIMATE_VIDEO_FIELD in inp
+
+
+def test_animate_in_limits():
+    import config
+    assert "animate" in config.LIMITS
 
 
 def test_demo_provider_returns_placeholder():

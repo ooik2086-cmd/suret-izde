@@ -38,7 +38,10 @@ log = logging.getLogger("aibot")
 user_mode = {}
 
 PROMPT_MODES = {"image", "video"}   # мәтін сұрайтын режимдер
-PHOTO_MODES = {"restore", "avatar"}  # фото сұрайтын режимдер
+PHOTO_MODES = {"restore", "avatar"}  # бір фото сұрайтын режимдер
+# "animate" режимі екі қадамды: алдымен фото, сосын видео. Аралық фотоны
+# осында сақтаймыз (user_id → сурет байттары).
+animate_image = {}
 
 provider = get_provider()
 
@@ -53,6 +56,7 @@ def main_menu(lang):
     rows += [
         [InlineKeyboardButton(text=t(lang, "menu_restore"), callback_data="m:restore")],
         [InlineKeyboardButton(text=t(lang, "menu_avatar"), callback_data="m:avatar")],
+        [InlineKeyboardButton(text=t(lang, "menu_animate"), callback_data="m:animate")],
         [InlineKeyboardButton(text=t(lang, "menu_buy"), callback_data="buy")],
         [
             InlineKeyboardButton(text=t(lang, "menu_balance"), callback_data="balance"),
@@ -182,9 +186,11 @@ async def on_mode(c: CallbackQuery):
         await c.answer(t(lang, "video_disabled"), show_alert=True)
         return
     user_mode[c.from_user.id] = mode
+    animate_image.pop(c.from_user.id, None)  # жаңа режим — ескі аралық фотоны тазалаймыз
     ask = {
         "image": "ask_prompt_image", "video": "ask_prompt_video",
         "restore": "ask_photo_restore", "avatar": "ask_photo_avatar",
+        "animate": "ask_animate_photo",
     }[mode]
     await c.message.edit_text(t(lang, ask), reply_markup=back_menu(lang))
     await c.answer()
@@ -203,12 +209,39 @@ async def on_text(m: Message):
 @dp.message(F.photo)
 async def on_photo(m: Message):
     lang = db.get_lang(m.from_user.id)
-    mode = user_mode.get(m.from_user.id)
+    uid = m.from_user.id
+    mode = user_mode.get(uid)
+    buf = await m.bot.download(m.photo[-1].file_id)
+    if mode == "animate":
+        # 1/2 қадам: кейіпкер суретін сақтап, видео сұраймыз.
+        animate_image[uid] = buf.read()
+        await m.answer(t(lang, "ask_animate_video"), reply_markup=back_menu(lang))
+        return
     if mode not in PHOTO_MODES:
         await m.answer(t(lang, "need_pick_mode"), reply_markup=main_menu(lang))
         return
-    buf = await m.bot.download(m.photo[-1].file_id)
     await run_generation(m, lang, mode, image_bytes=buf.read())
+
+
+@dp.message(F.video | F.animation | F.video_note | F.document)
+async def on_video(m: Message):
+    lang = db.get_lang(m.from_user.id)
+    uid = m.from_user.id
+    if user_mode.get(uid) != "animate":
+        await m.answer(t(lang, "need_pick_mode"), reply_markup=main_menu(lang))
+        return
+    img = animate_image.get(uid)
+    if not img:
+        await m.answer(t(lang, "ask_animate_photo"), reply_markup=back_menu(lang))
+        return
+    media = m.video or m.animation or m.video_note or m.document
+    try:
+        buf = await m.bot.download(media.file_id)
+    except Exception:  # noqa: BLE001 — Telegram боты 20 МБ-тан үлкен файлды жүктей алмайды
+        await m.answer(t(lang, "video_too_big"), reply_markup=main_menu(lang))
+        return
+    animate_image.pop(uid, None)
+    await run_generation(m, lang, "animate", image_bytes=img, video_bytes=buf.read())
 
 
 @dp.message(F.text.startswith("/"))
@@ -218,7 +251,7 @@ async def on_unknown_cmd(m: Message):
 
 
 # ─────────────────────────── генерация ───────────────────────────
-async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None):
+async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None, video_bytes=None):
     uid = m.from_user.id
     ok, used, limit = db.can_use(uid, mode)
     use_paid = False
@@ -232,7 +265,8 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None):
 
     status = await m.answer(t(lang, "working"))
     try:
-        res = await provider.generate(mode, prompt=prompt, image_bytes=image_bytes)
+        res = await provider.generate(
+            mode, prompt=prompt, image_bytes=image_bytes, video_bytes=video_bytes)
     except Exception as e:  # noqa: BLE001
         log.exception("generation failed: %s", e)
         await status.edit_text(t(lang, "error"), reply_markup=main_menu(lang))
