@@ -10,7 +10,11 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the app
+      - name: Ping the bot (so it never sleeps)
+        run: |
+          echo "Pinging bot..."
+          curl -s -o /dev/null -w "bot HTTP %{http_code}\n" --max-time 60 https://suret-izde-1.onrender.com/ || true
+      - name: Ping the web app
         run: |
           echo "Pinging suret-izde..."
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 60 https://suret-izde.onrender.com/ || true
+          curl -s -o /dev/null -w "site HTTP %{http_code}\n" --max-time 60 https://suret-izde.onrender.com/ || true

@@ -12,6 +12,7 @@ Render-де web-сервис ретінде жұмыс істейді: long-poll
 
 import asyncio
 import logging
+import os
 import sys
 
 from aiogram import Bot, Dispatcher, F
@@ -373,6 +374,25 @@ async def start_health_server():
     log.info("health server on :%d", config.PORT)
 
 
+async def keep_awake():
+    """Render тегін серверін ұйықтатпау үшін өзін-өзі ~10 минут сайын «оятады»
+    (өз публик URL-іне сұраныс жібереді → inbound трафик → ұйықтамайды)."""
+    url = os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+    if not url:
+        log.info("keep-alive өшік (RENDER_EXTERNAL_URL жоқ)")
+        return
+    import aiohttp
+    while True:
+        await asyncio.sleep(600)  # 10 минут
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(url, timeout=aiohttp.ClientTimeout(total=30)) as r:
+                    await r.read()
+            log.info("keep-alive ping → %s", url)
+        except Exception as e:  # noqa: BLE001
+            log.warning("keep-alive ping сәтсіз: %s", e)
+
+
 async def main():
     if not config.BOT_TOKEN:
         sys.exit("BOT_TOKEN орнатылмаған. @BotFather-дан токен алып, env-ке қойыңыз.")
@@ -380,6 +400,7 @@ async def main():
         log.warning("REPLICATE_API_TOKEN жоқ — ДЕМО режимде жұмыс істейді.")
     bot = Bot(config.BOT_TOKEN)
     await start_health_server()
+    asyncio.create_task(keep_awake())  # ұйықтап қалмау үшін
     log.info("bot polling started")
     await dp.start_polling(bot)
 
