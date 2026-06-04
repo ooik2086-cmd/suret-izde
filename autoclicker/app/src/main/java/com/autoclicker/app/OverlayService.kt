@@ -45,7 +45,7 @@ class OverlayService : Service() {
     private var running = false
     private var clickCount = 0
 
-    private val intervalMs = 200L // секундына 5 рет
+    private val intervalMs = 33L // секундына ~30 рет
 
     private var panelWidthPx = 0
     private var screenWidthPx = 0

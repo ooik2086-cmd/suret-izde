@@ -118,7 +118,7 @@ class MainActivity : Activity() {
         })
 
         root.addView(TextView(this).apply {
-            text = "Жылдамдық: секундына 5 рет"
+            text = "Жылдамдық: секундына 30 рет"
             textSize = 12f
             setTextColor(Color.parseColor("#6B7186"))
             gravity = Gravity.CENTER
