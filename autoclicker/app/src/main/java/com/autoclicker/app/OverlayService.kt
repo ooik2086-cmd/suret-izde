@@ -18,19 +18,17 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Экран үстіндегі басқару:
- *  - тінтуір белгісі (саусақпен қалаған жерге сүйреледі) — басу осы жерге түседі
- *  - тік (вертикаль) панель: басылу саны, СТАРТ, СТОП, ✕ (жабу)
- *  - панельді жоғарғы тұтқасынан ұстап кез келген жерге жылжытуға болады
- *  - жылдамдық: секундына 1 рет
+ * Ықшам тік панель — экранның шетінде тұрады, көп орын алмайды.
+ * Реті (жоғарыдан төмен): ⠿ жылжыту, ON (жасыл), OFF (қызыл), сан, ✕ (қызыл).
+ * Жылдамдық: секундына 1 рет.
  */
 class OverlayService : Service() {
 
@@ -49,6 +47,9 @@ class OverlayService : Service() {
 
     private val intervalMs = 1000L // секундына 1 рет
 
+    private var panelWidthPx = 0
+    private var screenWidthPx = 0
+
     private val clickRunnable = object : Runnable {
         override fun run() {
             if (!running) return
@@ -58,7 +59,7 @@ class OverlayService : Service() {
                 val y = (targetParams.y + targetView.height / 2).toFloat()
                 svc.click(x, y)
                 clickCount++
-                counterLabel.text = "Басылды: $clickCount"
+                counterLabel.text = clickCount.toString()
             }
             handler.postDelayed(this, intervalMs)
         }
@@ -70,6 +71,7 @@ class OverlayService : Service() {
         super.onCreate()
         startAsForeground()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        screenWidthPx = resources.displayMetrics.widthPixels
         addTargetView()
         addPanelView()
     }
@@ -96,8 +98,8 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = dp(150)
-            y = dp(350)
+            x = dp(130)
+            y = dp(400)
         }
 
         targetView.setOnTouchListener(object : View.OnTouchListener {
@@ -129,80 +131,76 @@ class OverlayService : Service() {
         windowManager.addView(targetView, targetParams)
     }
 
-    // ---- Басқару панелі (тік) ----
+    // ---- Ықшам тік панель ----
     private fun addPanelView() {
+        panelWidthPx = dp(74)
+
         panelView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(10), dp(16), dp(16))
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(8), dp(8), dp(8), dp(10))
             background = roundedBg("#EE1E2230", dp(22))
         }
 
-        // Жоғарғы тұтқа: «жылжыту» + ✕
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val dragHint = TextView(this).apply {
-            text = "⠿  жылжыту"
+        // 1) Жылжыту тұтқасы (⠿)
+        val dragHandle = TextView(this).apply {
+            text = "⠿"
             setTextColor(Color.parseColor("#9AA0B4"))
-            textSize = 13f
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setPadding(dp(6), dp(2), dp(6), dp(8))
         }
-        val spacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-        }
-        val closeBtn = TextView(this).apply {
-            text = "✕"
-            setTextColor(Color.WHITE)
-            textSize = 20f
-            setPadding(dp(14), dp(2), dp(6), dp(6))
-            setOnClickListener { stopSelf() }
-        }
-        header.addView(dragHint)
-        header.addView(spacer)
-        header.addView(closeBtn)
 
-        // Басылу саны
+        // 2) ON (жасыл)
+        val onBtn = squareButton("ON", "#3DDC84", 15f) { startClicking() }
+        // 3) OFF (қызыл)
+        val offBtn = squareButton("OFF", "#FF5252", 14f) { stopClicking() }
+
+        // 4) Басылу саны
         counterLabel = TextView(this).apply {
-            text = "Басылды: 0"
+            text = "0"
             setTextColor(Color.WHITE)
-            textSize = 20f
-            setPadding(0, dp(10), 0, dp(2))
+            textSize = 19f
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(2))
         }
-        val rateLabel = TextView(this).apply {
-            text = "Жылдамдық: секундына 1 рет"
+        val likeLabel = TextView(this).apply {
+            text = "басылды"
             setTextColor(Color.parseColor("#9AA0B4"))
-            textSize = 13f
-            setPadding(0, 0, 0, dp(14))
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(8))
         }
 
-        val startBtn = bigButton("СТАРТ", "#3DDC84") { startClicking() }
-        val stopBtn = bigButton("СТОП", "#FF5252") { stopClicking() }
+        // 5) ✕ (қызыл)
+        val closeBtn = squareButton("✕", "#E53935", 18f) { stopSelf() }
 
-        panelView.addView(header)
+        panelView.addView(dragHandle)
+        panelView.addView(onBtn)
+        panelView.addView(spaceView(dp(10)))
+        panelView.addView(offBtn)
         panelView.addView(counterLabel)
-        panelView.addView(rateLabel)
-        panelView.addView(startBtn)
-        panelView.addView(spaceView(dp(12)))
-        panelView.addView(stopBtn)
+        panelView.addView(likeLabel)
+        panelView.addView(closeBtn)
 
         panelParams = WindowManager.LayoutParams(
-            dp(230),
+            panelWidthPx,
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = dp(20)
-            y = dp(90)
+            x = screenWidthPx - panelWidthPx - dp(6) // оң шетте
+            y = dp(140)
         }
 
-        attachDrag(header)
+        attachDrag(dragHandle)
 
         windowManager.addView(panelView, panelParams)
     }
 
-    /** Панельді тұтқасынан ұстап жылжыту. */
+    /** Панельді тұтқасынан ұстап жылжыту + жібергенде ең жақын шетке жабысу. */
     private fun attachDrag(handle: View) {
         handle.setOnTouchListener(object : View.OnTouchListener {
             private var initX = 0
@@ -224,30 +222,35 @@ class OverlayService : Service() {
                         windowManager.updateViewLayout(panelView, panelParams)
                         return true
                     }
+                    MotionEvent.ACTION_UP -> {
+                        // ең жақын шетке жабыстыру
+                        val center = panelParams.x + panelWidthPx / 2
+                        panelParams.x = if (center < screenWidthPx / 2) dp(6)
+                            else screenWidthPx - panelWidthPx - dp(6)
+                        windowManager.updateViewLayout(panelView, panelParams)
+                        return true
+                    }
                 }
                 return false
             }
         })
     }
 
-    private fun bigButton(label: String, colorHex: String, onClick: () -> Unit): Button {
-        return Button(this).apply {
+    private fun squareButton(label: String, colorHex: String, size: Float, onClick: () -> Unit): TextView {
+        return TextView(this).apply {
             text = label
-            textSize = 17f
+            textSize = size
             setTextColor(Color.WHITE)
-            isAllCaps = false
+            gravity = Gravity.CENTER
             background = roundedBg(colorHex, dp(14))
-            stateListAnimator = null
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(54)
-            )
+            layoutParams = LinearLayout.LayoutParams(dp(58), dp(46))
+            isClickable = true
             setOnClickListener { onClick() }
         }
     }
 
     private fun spaceView(h: Int): View = View(this).apply {
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
+        layoutParams = LinearLayout.LayoutParams(dp(1), h)
     }
 
     private fun roundedBg(colorHex: String, radius: Int): GradientDrawable {
@@ -270,8 +273,7 @@ class OverlayService : Service() {
         if (running) return
         running = true
         clickCount = 0
-        counterLabel.text = "Басылды: 0"
-        // Тап нысананың астындағы ойынға өтуі үшін белгіні басылмайтын етеміз
+        counterLabel.text = "0"
         targetParams.flags = targetParams.flags or
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         windowManager.updateViewLayout(targetView, targetParams)
