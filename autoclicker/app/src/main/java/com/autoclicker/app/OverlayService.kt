@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -15,6 +16,7 @@ import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
@@ -24,9 +26,11 @@ import android.widget.Toast
 import kotlin.math.roundToInt
 
 /**
- * Экран үстіндегі қалқымалы басқару:
- *  - тінтуір белгісі (сүйреп жылжытуға болады) — басу осы жерге түседі
- *  - басқару панелі: ◀ ▶ (жылжыту), – + (жылдамдық), СТАРТ/СТОП, ✕ (жабу)
+ * Экран үстіндегі басқару:
+ *  - тінтуір белгісі (саусақпен қалаған жерге сүйреледі) — басу осы жерге түседі
+ *  - тік (вертикаль) панель: басылу саны, СТАРТ, СТОП, ✕ (жабу)
+ *  - панельді жоғарғы тұтқасынан ұстап кез келген жерге жылжытуға болады
+ *  - жылдамдық: секундына 1 рет
  */
 class OverlayService : Service() {
 
@@ -37,16 +41,13 @@ class OverlayService : Service() {
 
     private lateinit var panelView: LinearLayout
     private lateinit var panelParams: WindowManager.LayoutParams
-    private lateinit var speedLabel: TextView
-    private lateinit var startStopButton: Button
+    private lateinit var counterLabel: TextView
 
     private val handler = Handler(Looper.getMainLooper())
     private var running = false
+    private var clickCount = 0
 
-    // Интервал нұсқалары (ms): баяудан жылдамға дейін.
-    // 2000ms = 2с сайын 1 рет ... 10ms = ~секундына 100 рет
-    private val intervals = longArrayOf(2000, 1000, 500, 200, 100, 50, 20, 10)
-    private var intervalIndex = 2 // 500ms ≈ секундына 2 рет
+    private val intervalMs = 1000L // секундына 1 рет
 
     private val clickRunnable = object : Runnable {
         override fun run() {
@@ -56,8 +57,10 @@ class OverlayService : Service() {
                 val x = (targetParams.x + targetView.width / 2).toFloat()
                 val y = (targetParams.y + targetView.height / 2).toFloat()
                 svc.click(x, y)
+                clickCount++
+                counterLabel.text = "Басылды: $clickCount"
             }
-            handler.postDelayed(this, intervals[intervalIndex])
+            handler.postDelayed(this, intervalMs)
         }
     }
 
@@ -78,6 +81,9 @@ class OverlayService : Service() {
             @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
 
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).roundToInt()
+
+    // ---- Тінтуір белгісі (басу нысанасы) ----
     private fun addTargetView() {
         targetView = ImageView(this).apply {
             setImageResource(R.drawable.ic_mouse)
@@ -90,8 +96,8 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 300
-            y = 600
+            x = dp(150)
+            y = dp(350)
         }
 
         targetView.setOnTouchListener(object : View.OnTouchListener {
@@ -123,76 +129,136 @@ class OverlayService : Service() {
         windowManager.addView(targetView, targetParams)
     }
 
+    // ---- Басқару панелі (тік) ----
     private fun addPanelView() {
         panelView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(10), dp(16), dp(16))
+            background = roundedBg("#EE1E2230", dp(22))
+        }
+
+        // Жоғарғы тұтқа: «жылжыту» + ✕
+        val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.parseColor("#CC000000"))
-            setPadding(8, 8, 8, 8)
+            gravity = Gravity.CENTER_VERTICAL
         }
-
-        speedLabel = TextView(this).apply {
+        val dragHint = TextView(this).apply {
+            text = "⠿  жылжыту"
+            setTextColor(Color.parseColor("#9AA0B4"))
+            textSize = 13f
+        }
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+        }
+        val closeBtn = TextView(this).apply {
+            text = "✕"
             setTextColor(Color.WHITE)
-            textSize = 12f
-            setPadding(12, 0, 12, 0)
-            gravity = Gravity.CENTER
+            textSize = 20f
+            setPadding(dp(14), dp(2), dp(6), dp(6))
+            setOnClickListener { stopSelf() }
+        }
+        header.addView(dragHint)
+        header.addView(spacer)
+        header.addView(closeBtn)
+
+        // Басылу саны
+        counterLabel = TextView(this).apply {
+            text = "Басылды: 0"
+            setTextColor(Color.WHITE)
+            textSize = 20f
+            setPadding(0, dp(10), 0, dp(2))
+        }
+        val rateLabel = TextView(this).apply {
+            text = "Жылдамдық: секундына 1 рет"
+            setTextColor(Color.parseColor("#9AA0B4"))
+            textSize = 13f
+            setPadding(0, 0, 0, dp(14))
         }
 
-        startStopButton = smallButton("СТАРТ") { toggleRun() }
+        val startBtn = bigButton("СТАРТ", "#3DDC84") { startClicking() }
+        val stopBtn = bigButton("СТОП", "#FF5252") { stopClicking() }
 
-        panelView.addView(smallButton("◀") { moveTarget(-40) })
-        panelView.addView(smallButton("▶") { moveTarget(40) })
-        panelView.addView(smallButton("–") { changeSpeed(-1) })
-        panelView.addView(speedLabel)
-        panelView.addView(smallButton("+") { changeSpeed(1) })
-        panelView.addView(startStopButton)
-        panelView.addView(smallButton("✕") { stopSelf() })
-
-        updateSpeedLabel()
+        panelView.addView(header)
+        panelView.addView(counterLabel)
+        panelView.addView(rateLabel)
+        panelView.addView(startBtn)
+        panelView.addView(spaceView(dp(12)))
+        panelView.addView(stopBtn)
 
         panelParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dp(230),
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 0
-            y = 0
+            x = dp(20)
+            y = dp(90)
         }
+
+        attachDrag(header)
 
         windowManager.addView(panelView, panelParams)
     }
 
-    private fun smallButton(label: String, onClick: () -> Unit): Button {
+    /** Панельді тұтқасынан ұстап жылжыту. */
+    private fun attachDrag(handle: View) {
+        handle.setOnTouchListener(object : View.OnTouchListener {
+            private var initX = 0
+            private var initY = 0
+            private var touchX = 0f
+            private var touchY = 0f
+            override fun onTouch(v: View?, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initX = panelParams.x
+                        initY = panelParams.y
+                        touchX = event.rawX
+                        touchY = event.rawY
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        panelParams.x = initX + (event.rawX - touchX).roundToInt()
+                        panelParams.y = initY + (event.rawY - touchY).roundToInt()
+                        windowManager.updateViewLayout(panelView, panelParams)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
+
+    private fun bigButton(label: String, colorHex: String, onClick: () -> Unit): Button {
         return Button(this).apply {
             text = label
-            textSize = 13f
-            setPadding(6, 4, 6, 4)
-            minWidth = 0
-            minimumWidth = 0
+            textSize = 17f
+            setTextColor(Color.WHITE)
+            isAllCaps = false
+            background = roundedBg(colorHex, dp(14))
+            stateListAnimator = null
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(54)
+            )
             setOnClickListener { onClick() }
         }
     }
 
-    private fun moveTarget(dx: Int) {
-        targetParams.x += dx
-        windowManager.updateViewLayout(targetView, targetParams)
+    private fun spaceView(h: Int): View = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
     }
 
-    private fun changeSpeed(dir: Int) {
-        intervalIndex = (intervalIndex + dir).coerceIn(0, intervals.size - 1)
-        updateSpeedLabel()
+    private fun roundedBg(colorHex: String, radius: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius.toFloat()
+            setColor(Color.parseColor(colorHex))
+        }
     }
 
-    private fun updateSpeedLabel() {
-        val ms = intervals[intervalIndex]
-        val perSec = 1000.0 / ms
-        val rate = if (perSec >= 1) "${perSec.roundToInt()}/сек" else "${ms / 1000.0}с"
-        speedLabel.text = "$ms ms\n$rate"
-    }
-
-    private fun toggleRun() {
+    private fun startClicking() {
         if (AutoClickService.instance == null) {
             Toast.makeText(
                 this,
@@ -201,21 +267,24 @@ class OverlayService : Service() {
             ).show()
             return
         }
-        running = !running
-        if (running) {
-            startStopButton.text = "СТОП"
-            // Тап белгінің астындағы ойынға өтуі үшін белгіні басылмайтын етеміз.
-            targetParams.flags = targetParams.flags or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            windowManager.updateViewLayout(targetView, targetParams)
-            handler.post(clickRunnable)
-        } else {
-            startStopButton.text = "СТАРТ"
-            handler.removeCallbacks(clickRunnable)
-            targetParams.flags = targetParams.flags and
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-            windowManager.updateViewLayout(targetView, targetParams)
-        }
+        if (running) return
+        running = true
+        clickCount = 0
+        counterLabel.text = "Басылды: 0"
+        // Тап нысананың астындағы ойынға өтуі үшін белгіні басылмайтын етеміз
+        targetParams.flags = targetParams.flags or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        windowManager.updateViewLayout(targetView, targetParams)
+        handler.post(clickRunnable)
+    }
+
+    private fun stopClicking() {
+        if (!running) return
+        running = false
+        handler.removeCallbacks(clickRunnable)
+        targetParams.flags = targetParams.flags and
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        windowManager.updateViewLayout(targetView, targetParams)
     }
 
     private fun startAsForeground() {
