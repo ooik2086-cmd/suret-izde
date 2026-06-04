@@ -22,8 +22,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 /**
  * Ықшам тік панель — экранның шетінде тұрады, көп орын алмайды.
@@ -45,7 +45,9 @@ class OverlayService : Service() {
     private var running = false
     private var clickCount = 0
 
-    private val intervalMs = 33L // секундына ~30 рет
+    // Адамша басу: интервал да, мишканың орны да аздап өзгеріп тұрады
+    private var baseX = 0
+    private var baseY = 0
 
     private var panelWidthPx = 0
     private var screenWidthPx = 0
@@ -55,13 +57,20 @@ class OverlayService : Service() {
             if (!running) return
             val svc = AutoClickService.instance
             if (svc != null) {
+                // мишканы аздап жылжытамыз (адам қолы сияқты)
+                val j = dp(6)
+                targetParams.x = baseX + Random.nextInt(-j, j + 1)
+                targetParams.y = baseY + Random.nextInt(-j, j + 1)
+                runCatching { windowManager.updateViewLayout(targetView, targetParams) }
+
                 val x = (targetParams.x + targetView.width / 2).toFloat()
                 val y = (targetParams.y + targetView.height / 2).toFloat()
                 svc.click(x, y)
                 clickCount++
                 counterLabel.text = clickCount.toString()
             }
-            handler.postDelayed(this, intervalMs)
+            // әр басудың арасы бірдей емес: секундына ~5–15 рет
+            handler.postDelayed(this, Random.nextLong(66L, 201L))
         }
     }
 
@@ -274,6 +283,8 @@ class OverlayService : Service() {
         running = true
         clickCount = 0
         counterLabel.text = "0"
+        baseX = targetParams.x
+        baseY = targetParams.y
         targetParams.flags = targetParams.flags or
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         windowManager.updateViewLayout(targetView, targetParams)
@@ -284,6 +295,8 @@ class OverlayService : Service() {
         if (!running) return
         running = false
         handler.removeCallbacks(clickRunnable)
+        targetParams.x = baseX
+        targetParams.y = baseY
         targetParams.flags = targetParams.flags and
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         windowManager.updateViewLayout(targetView, targetParams)

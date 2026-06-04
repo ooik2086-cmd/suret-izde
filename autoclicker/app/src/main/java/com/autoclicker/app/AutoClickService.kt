@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.view.accessibility.AccessibilityEvent
+import kotlin.random.Random
 
 /**
  * Accessibility қызметі — экранға нақты "тап" (басу) жібереді.
@@ -27,7 +28,8 @@ class AutoClickService : AccessibilityService() {
     /** (x, y) координатасына бір рет басу. */
     fun click(x: Float, y: Float) {
         val path = Path().apply { moveTo(x, y) }
-        val stroke = GestureDescription.StrokeDescription(path, 0L, 1L)
+        val duration = Random.nextLong(8L, 26L) // басу ұзақтығы да әртүрлі
+        val stroke = GestureDescription.StrokeDescription(path, 0L, duration)
         val gesture = GestureDescription.Builder().addStroke(stroke).build()
         dispatchGesture(gesture, null, null)
     }
