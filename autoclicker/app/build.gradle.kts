@@ -15,9 +15,22 @@ android {
         versionName = "1.1"
     }
 
+    signingConfigs {
+        create("stable") {
+            storeFile = file("release.keystore")
+            storePassword = "autoclicker"
+            keyAlias = "autoclicker"
+            keyPassword = "autoclicker"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("stable")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("stable")
         }
     }
 
