@@ -35,6 +35,9 @@ LIMITS = {
     "image":   _int("LIMIT_IMAGE", 100),
     "combine": _int("LIMIT_COMBINE", 0),
     "animate": _int("LIMIT_ANIMATE", 0),
+    # 🎵 Музыка (вокал + аспап) — Replicate-те ақылы, сондықтан тәуліктік
+    # тегін лимит АЗ (зиянды бақылау үшін). Керек болса LIMIT_MUSIC-пен өсіріңіз.
+    "music":   _int("LIMIT_MUSIC", 1),
 }
 
 # ── Replicate модельдері (керек болса env-пен ауыстырыңыз) ──
@@ -44,7 +47,17 @@ MODELS = {
     "combine": os.environ.get("MODEL_COMBINE", "qwen/qwen-image-edit"),
     # Суреттегі кейіпкерді видеодағы қозғалыспен жандандыру (image + driving video).
     "animate": os.environ.get("MODEL_ANIMATE", "fofr/live-portrait"),
+    # 🎵 Толық ән (вокал + музыка) мәтіннен. ACE-Step — кілтсіз үлгі видео
+    # қажет етпейді (Suno-ға ең жақын ашық модель). Schema өзгерсе env-пен реттеңіз.
+    "music":   os.environ.get("MODEL_MUSIC",   "lucataco/ace-step"),
 }
+
+# ── 🎵 Музыка моделінің кіріс өрістері (модель бойынша реттеуге болады) ──
+# ACE-Step: tags (стиль) + lyrics (ән мәтіні) + duration (секунд).
+MUSIC_TAGS_FIELD = os.environ.get("MUSIC_TAGS_FIELD", "tags")
+MUSIC_LYRICS_FIELD = os.environ.get("MUSIC_LYRICS_FIELD", "lyrics")
+MUSIC_DURATION_FIELD = os.environ.get("MUSIC_DURATION_FIELD", "duration")
+MUSIC_DURATION = _int("MUSIC_DURATION", 60)  # ән ұзақтығы (секунд)
 
 # "combine" моделіне суреттер қай өріспен берілетіні (модельге қарай реттеңіз).
 COMBINE_IMAGE_FIELD = os.environ.get("COMBINE_IMAGE_FIELD", "image")

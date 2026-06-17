@@ -136,7 +136,50 @@ def test_build_input_combine_passes_images():
 
 def test_modes_in_limits():
     import config
-    assert {"image", "combine", "animate"} <= set(config.LIMITS)
+    assert {"image", "combine", "animate", "music"} <= set(config.LIMITS)
+
+
+def test_music_in_models_and_limits():
+    import config
+    assert "music" in config.MODELS and config.MODELS["music"]
+    assert "music" in config.LIMITS
+
+
+def test_build_music_input_uses_configured_fields():
+    import config
+    import providers
+    inp = providers._build_music_input("pop, upbeat", "[verse]\nhello")
+    assert inp[config.MUSIC_TAGS_FIELD] == "pop, upbeat"
+    assert inp[config.MUSIC_LYRICS_FIELD] == "[verse]\nhello"
+    assert inp[config.MUSIC_DURATION_FIELD] == config.MUSIC_DURATION
+
+
+def test_build_music_input_has_safe_defaults():
+    import providers
+    inp = providers._build_music_input("", "")
+    # Бос болса да модель құламас үшін фолбэк мәндер беріледі.
+    assert all(v for v in inp.values())
+
+
+def test_parse_song_json_plain_and_fenced():
+    import providers
+    tags, lyrics = providers._parse_song_json(
+        '{"tags": "rock, loud", "lyrics": "[verse]\\nla la"}')
+    assert tags == "rock, loud" and "la la" in lyrics
+    # Markdown ```json ... ``` қоршауын да тазалай алады.
+    tags2, lyrics2 = providers._parse_song_json(
+        '```json\n{"tags": "jazz", "lyrics": "smooth"}\n```')
+    assert tags2 == "jazz" and lyrics2 == "smooth"
+    # Бұзық кіріс — қауіпсіз фолбэк (бос lyrics).
+    tags3, lyrics3 = providers._parse_song_json("not json at all")
+    assert tags3 == "pop" and lyrics3 == ""
+
+
+def test_free_provider_music_needs_token():
+    import asyncio
+    import providers
+    res = asyncio.run(providers.FreeProvider().generate("music", prompt="ауыл туралы ән"))
+    assert res.note == "needs_token"
 
 
 def test_demo_provider_returns_placeholder():

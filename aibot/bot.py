@@ -59,6 +59,7 @@ def main_menu(lang):
         [InlineKeyboardButton(text=t(lang, "menu_image"), callback_data="m:image")],
         [InlineKeyboardButton(text=t(lang, "menu_combine"), callback_data="m:combine")],
         [InlineKeyboardButton(text=t(lang, "menu_animate"), callback_data="m:animate")],
+        [InlineKeyboardButton(text=t(lang, "menu_music"), callback_data="m:music")],
         [InlineKeyboardButton(text=t(lang, "menu_buy"), callback_data="buy")],
         [
             InlineKeyboardButton(text=t(lang, "menu_balance"), callback_data="balance"),
@@ -166,7 +167,7 @@ async def on_balance(c: CallbackQuery):
     lang = db.get_lang(c.from_user.id)
     s = db.usage_summary(c.from_user.id)
     text = t(lang, "balance", image=s["image"], combine=s["combine"],
-             animate=s["animate"])
+             animate=s["animate"], music=s["music"])
     text += "\n" + t(lang, "credits_left", n=db.get_credits(c.from_user.id))
     if db.is_subscribed(c.from_user.id):
         until = db.sub_until(c.from_user.id).date().isoformat()
@@ -254,7 +255,8 @@ async def on_mode(c: CallbackQuery):
         await c.message.edit_text(t(lang, "ask_format"), reply_markup=format_menu(lang))
         await c.answer()
         return
-    ask = {"combine": "ask_combine", "animate": "ask_animate_video"}[mode]
+    ask = {"combine": "ask_combine", "animate": "ask_animate_video",
+           "music": "ask_music"}[mode]
     await c.message.edit_text(t(lang, ask), reply_markup=back_menu(lang))
     await c.answer()
 
@@ -280,6 +282,9 @@ async def on_text(m: Message):
     if mode == "image":
         w, h = user_format.get(uid, (1024, 1024))
         await run_generation(m, lang, "image", prompt=m.text.strip(), width=w, height=h)
+    elif mode == "music":
+        # «Авто пилот»: жай идея жазса жетеді — бот әнді өзі құрап орындатады.
+        await run_generation(m, lang, "music", prompt=m.text.strip())
     elif mode == "combine":
         combine_prompt[uid] = m.text.strip()  # қосымша нұсқау (міндетті емес)
         await m.answer(t(lang, "combine_got_prompt"), reply_markup=combine_menu(lang))
@@ -429,9 +434,14 @@ async def run_generation(m: Message, lang, mode, prompt=None, image_bytes=None,
     caption = t(lang, "done")
     if res.note == "demo":
         caption += "\n" + t(lang, "demo_note")
+    if res.caption:
+        # Музыка режимінде — ботта жазылған ән мәтіні. Telegram шегіне сыйдырамыз.
+        caption = (caption + "\n\n" + res.caption)[:1000]
 
     try:
-        if res.kind == "video":
+        if res.kind == "audio":
+            await m.answer_audio(res.url, caption=caption, title="🎵")
+        elif res.kind == "video":
             # Жандандыруда үлгі видеоның дыбысын/дауысын нәтижеге қосамыз.
             final = await mux_audio(res.url, video_bytes) if (mode == "animate" and video_bytes) else None
             if final:

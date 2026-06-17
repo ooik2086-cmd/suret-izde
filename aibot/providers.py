@@ -11,6 +11,7 @@
 
 import asyncio
 import io
+import json
 import random
 from urllib.parse import quote
 
@@ -95,12 +96,82 @@ def _fix_symbols(prompt):
     return prompt
 
 
+async def write_song(text):
+    """Қарапайым идеядан ТОЛЫҚ ӘН жазады (тегін LLM, Pollinations text).
+
+    Қайтарады: (tags, lyrics)
+      • tags   — ағылшын стиль тегтері (жанр/көңіл-күй/вокал) — модель үшін.
+      • lyrics — ҚОЛДАНУШЫ ТІЛІНДЕГІ ән мәтіні [verse]/[chorus] құрылымымен.
+
+    Осылай адам қазақша «ауыл туралы көңілді ән» десе — бот толық қазақша
+    ән мәтінін жазып, оны вокалмен орындатады («авто пилот»).
+    Сәтсіз болса — қарапайым фолбэк қайтарады (зиянсыз)."""
+    text = (text or "").strip()
+    if not text:
+        text = "a cheerful song about life"
+    system = (
+        "You are a professional songwriter. The user gives a simple idea or theme, "
+        "possibly in Kazakh or Russian, possibly with typos. Write a COMPLETE song. "
+        "Keep the LYRICS in the SAME language the user wrote in (a Kazakh idea -> "
+        "Kazakh lyrics; a Russian idea -> Russian lyrics). Structure the lyrics with "
+        "section tags like [verse], [chorus], [bridge] and real line breaks. "
+        "Separately choose musical STYLE tags (genre, mood, tempo, instruments, vocal "
+        "type) in ENGLISH. Respond with STRICT JSON ONLY, no markdown, exactly: "
+        '{\"tags\": \"comma, separated, english, style, tags\", '
+        '\"lyrics\": \"the full lyrics with [verse]/[chorus] tags and newlines\"}'
+    )
+    try:
+        payload = {
+            "model": "openai",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            "private": True,
+        }
+        timeout = aiohttp.ClientTimeout(total=25)
+        async with aiohttp.ClientSession(timeout=timeout) as s:
+            async with s.post("https://text.pollinations.ai/openai", json=payload) as r:
+                data = await r.json(content_type=None)
+        raw = (data["choices"][0]["message"]["content"] or "").strip()
+        tags, lyrics = _parse_song_json(raw)
+        if lyrics:
+            return tags, lyrics
+    except Exception:
+        pass
+    return "pop, catchy, upbeat, clear vocals", text
+
+
+def _parse_song_json(raw):
+    """LLM шығысынан (tags, lyrics) ажыратады. Markdown/қоршаулар болса тазалайды."""
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = raw.strip("`")
+        nl = raw.find("\n")
+        if nl != -1 and raw[:nl].strip().lower() in ("json", ""):
+            raw = raw[nl + 1:]
+    i, j = raw.find("{"), raw.rfind("}")
+    if i != -1 and j != -1 and j > i:
+        raw = raw[i:j + 1]
+    try:
+        obj = json.loads(raw)
+        tags = (obj.get("tags") or "").strip()
+        lyrics = (obj.get("lyrics") or "").strip()
+        return (tags or "pop"), lyrics
+    except Exception:
+        return "pop", ""
+
+
 from config import (
     ANIMATE_IMAGE_FIELD,
     ANIMATE_VIDEO_FIELD,
     COMBINE_IMAGE_FIELD,
     IMAGE_VARIANTS,
     MODELS,
+    MUSIC_DURATION,
+    MUSIC_DURATION_FIELD,
+    MUSIC_LYRICS_FIELD,
+    MUSIC_TAGS_FIELD,
     REPLICATE_API_TOKEN,
 )
 
@@ -146,6 +217,17 @@ def _build_input(mode, prompt, image_bytes, video_bytes=None, images=None):
     raise ValueError("белгісіз режим: %s" % mode)
 
 
+def _build_music_input(tags, lyrics):
+    """🎵 Музыка моделіне (ACE-Step т.б.) кіріс параметрлерін құрастыру."""
+    inp = {
+        MUSIC_TAGS_FIELD: tags or "pop",
+        MUSIC_LYRICS_FIELD: lyrics or "[verse]\nla la la la",
+    }
+    if MUSIC_DURATION_FIELD:
+        inp[MUSIC_DURATION_FIELD] = MUSIC_DURATION
+    return inp
+
+
 class ReplicateProvider:
     available = True
 
@@ -153,11 +235,19 @@ class ReplicateProvider:
         import replicate  # кешіктірілген импорт
 
         model = MODELS[mode]
-        inp = _build_input(mode, prompt, image_bytes, video_bytes, images)
+        if mode == "music":
+            # «Авто пилот»: бот алдымен әнді өзі жазады (мәтін + стиль), сосын орындатады.
+            tags, lyrics = await write_song(prompt)
+            inp = _build_music_input(tags, lyrics)
+        else:
+            inp = _build_input(mode, prompt, image_bytes, video_bytes, images)
         out = await asyncio.to_thread(replicate.run, model, input=inp)
         url = _first_url(out)
         if not url:
             raise RuntimeError("модель бос нәтиже қайтарды")
+        if mode == "music":
+            # Әннің мәтінін бірге қайтарамыз — пайдаланушы сөзін көреді.
+            return GenResult("audio", url=url, caption=(lyrics or "")[:900])
         kind = "video" if mode in ("video", "animate") else "image"
         return GenResult(kind, url=url)
 

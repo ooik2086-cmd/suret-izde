@@ -12,7 +12,8 @@ T = {
             "Не істей аламын:\n"
             "🖼️ Мәтіннен сурет жасау (3 нұсқа)\n"
             "🧩 2-3 суретті біріктіру/өңдеу\n"
-            "🎭 Суретті видеодағыдай жандандыру\n\n"
+            "🎭 Суретті видеодағыдай жандандыру\n"
+            "🎵 Толық ән жасау (мәтін + вокал)\n\n"
             "Қазақша/орысша жаза беріңіз — қалғанын өзім істеймін.\n"
             "Төмендегі батырмадан керегін таңдаңыз 👇"
         ),
@@ -22,6 +23,8 @@ T = {
         "menu_restore": "🪄 Фото жаңарту",
         "menu_avatar": "🧑‍💼 Аватар жасау",
         "menu_animate": "🎭 Суретті жандандыру",
+        "menu_music": "🎵 Ән жасау",
+        "ask_music": "🎵 Қандай ән керек? Тақырыбын мен көңіл-күйін жазыңыз (мыс. «ауыл туралы көңілді ән» немесе «анама арналған лирикалық ән»). Бот сөзін де, әуенін де, вокалын да өзі жасайды.",
         "ask_combine": "🧩 2-3 суретті бір-бірлеп жіберіңіз. Қаласаңыз нұсқау жазыңыз (мыс. «екеуін біріктір» немесе «1-шіні 2-шінің түрімен жаса»). Сосын «Біріктіру» басыңыз.",
         "combine_count": "✅ {n} сурет қабылданды. Тағы жіберіңіз немесе «Біріктіру» басыңыз.",
         "combine_got_prompt": "✍️ Нұсқау сақталды. Енді 2-3 сурет жіберіп, «Біріктіру» басыңыз.",
@@ -41,7 +44,7 @@ T = {
         "working": "⏳ Жасап жатырмын... біраз күте тұрыңыз (видео ұзағырақ).",
         "done": "✅ Дайын!",
         "limit_hit": "🚫 Бүгінгі тегін лимит бітті ({mode}: {used}/{limit}).\n\n💎 «Сатып алу» арқылы қосымша генерация алыңыз немесе ертең қайта көріңіз.",
-        "balance": "📊 Бүгінгі қолдану:\n🖼️ Сурет: {image}\n🧩 Біріктіру: {combine}\n🎭 Жандандыру: {animate}",
+        "balance": "📊 Бүгінгі қолдану:\n🖼️ Сурет: {image}\n🧩 Біріктіру: {combine}\n🎭 Жандандыру: {animate}\n🎵 Ән: {music}",
         "send_text_not_photo": "Алдымен мәзірден қызметті таңдаңыз 👇 (/start)",
         "send_photo_please": "Мәтін емес, фото жіберіңіз 📷",
         "need_pick_mode": "Алдымен мәзірден не істейтінімізді таңдаңыз 👇",
@@ -74,7 +77,8 @@ T = {
             "Что умею:\n"
             "🖼️ Создавать изображения по тексту (3 варианта)\n"
             "🧩 Объединять/редактировать 2-3 фото\n"
-            "🎭 Оживлять фото как в видео\n\n"
+            "🎭 Оживлять фото как в видео\n"
+            "🎵 Создавать песни (текст + вокал)\n\n"
             "Пишите на казахском/русском — остальное сделаю сам.\n"
             "Выберите нужное кнопкой ниже 👇"
         ),
@@ -84,6 +88,8 @@ T = {
         "menu_restore": "🪄 Восстановить фото",
         "menu_avatar": "🧑‍💼 Создать аватар",
         "menu_animate": "🎭 Оживить фото",
+        "menu_music": "🎵 Создать песню",
+        "ask_music": "🎵 Какая песня нужна? Напишите тему и настроение (напр. «весёлая песня про лето» или «лирическая песня для мамы»). Бот сам напишет и слова, и музыку, и вокал.",
         "ask_combine": "🧩 Пришлите 2-3 фото по одному. По желанию напишите инструкцию (напр. «объедини оба» или «сделай 1-е в стиле 2-го»). Затем нажмите «Объединить».",
         "combine_count": "✅ Принято фото: {n}. Пришлите ещё или нажмите «Объединить».",
         "combine_got_prompt": "✍️ Инструкция сохранена. Теперь пришлите 2-3 фото и нажмите «Объединить».",
@@ -103,7 +109,7 @@ T = {
         "working": "⏳ Генерирую... подождите немного (видео дольше).",
         "done": "✅ Готово!",
         "limit_hit": "🚫 Дневной бесплатный лимит исчерпан ({mode}: {used}/{limit}).\n\n💎 Нажмите «Купить», чтобы получить дополнительные генерации, или попробуйте завтра.",
-        "balance": "📊 Сегодня использовано:\n🖼️ Фото: {image}\n🧩 Объединение: {combine}\n🎭 Оживление: {animate}",
+        "balance": "📊 Сегодня использовано:\n🖼️ Фото: {image}\n🧩 Объединение: {combine}\n🎭 Оживление: {animate}\n🎵 Песня: {music}",
         "send_text_not_photo": "Сначала выберите услугу в меню 👇 (/start)",
         "send_photo_please": "Пришлите фото, а не текст 📷",
         "need_pick_mode": "Сначала выберите в меню, что делаем 👇",
@@ -136,7 +142,8 @@ T = {
             "What I can do:\n"
             "🖼️ Create images from text (3 options)\n"
             "🧩 Combine/edit 2-3 photos\n"
-            "🎭 Animate a photo like in a video\n\n"
+            "🎭 Animate a photo like in a video\n"
+            "🎵 Create full songs (lyrics + vocals)\n\n"
             "Write in Kazakh/Russian — I'll do the rest.\n"
             "Pick what you need with a button below 👇"
         ),
@@ -146,6 +153,8 @@ T = {
         "menu_restore": "🪄 Restore photo",
         "menu_avatar": "🧑‍💼 Create avatar",
         "menu_animate": "🎭 Animate photo",
+        "menu_music": "🎵 Make song",
+        "ask_music": "🎵 What song do you want? Write a theme and mood (e.g. 'a cheerful song about summer' or 'a lyrical song for mom'). The bot writes the lyrics, music and vocals itself.",
         "ask_combine": "🧩 Send 2-3 photos one by one. Optionally add an instruction (e.g. 'combine both' or 'make the 1st in the style of the 2nd'). Then tap 'Combine'.",
         "combine_count": "✅ Photos received: {n}. Send more or tap 'Combine'.",
         "combine_got_prompt": "✍️ Instruction saved. Now send 2-3 photos and tap 'Combine'.",
@@ -165,7 +174,7 @@ T = {
         "working": "⏳ Working on it... please wait a bit (video takes longer).",
         "done": "✅ Done!",
         "limit_hit": "🚫 Today's free limit is used up ({mode}: {used}/{limit}).\n\n💎 Tap 'Buy' for extra generations, or try again tomorrow.",
-        "balance": "📊 Used today:\n🖼️ Image: {image}\n🧩 Combine: {combine}\n🎭 Animate: {animate}",
+        "balance": "📊 Used today:\n🖼️ Image: {image}\n🧩 Combine: {combine}\n🎭 Animate: {animate}\n🎵 Song: {music}",
         "send_text_not_photo": "First pick a service in the menu 👇 (/start)",
         "send_photo_please": "Send a photo, not text 📷",
         "need_pick_mode": "First choose what to do from the menu 👇",
