@@ -59,13 +59,51 @@ API кілтін алу: [aistudio.google.com](https://aistudio.google.com) → 
 }
 ```
 
+### Imagen (Google сурет генерациясы)
+
+`gemini-imagen4` пакеті — Imagen 4.0 модельдері (Standard, Fast, Ultra). `GEMINI_API_KEY` қажет — бұл да [aistudio.google.com](https://aistudio.google.com)-дан алынатын сол кілт (`GOOGLE_API_KEY`-мен бірдей мән):
+
+```bash
+# Linux / macOS / WSL
+export GEMINI_API_KEY=ваш_google_api_key
+
+# Windows PowerShell
+$env:GEMINI_API_KEY = "ваш_google_api_key"
+
+# Windows CMD
+set GEMINI_API_KEY=ваш_google_api_key
+```
+
+**Imagen мүмкіндіктері:**
+- Мәтін → сурет (Imagen 4 Standard/Fast/Ultra)
+- Ен/биіктік қатынасы: 1:1, 3:4, 4:3, 9:16, 16:9
+- PNG / JPEG шығысы
+- Суреттер жергілікті файлға сақталады
+
+**Windows-та npx жұмыс істемесе** (`imagen` серверін де `cmd /c` арқылы іске қосыңыз):
+
+```json
+{
+  "mcpServers": {
+    "veo": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "google-veo3-1-mcp-server"]
+    },
+    "imagen": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "gemini-imagen4"]
+    }
+  }
+}
+```
+
 ### Тексеру
 
 Claude Code ішінде:
 ```
 /mcp
 ```
-`veo` тізімде шықса — қосылды.
+`veo` және `imagen` екеуі де тізімде шықса — дайын.
 
 ### Veo мүмкіндіктері
 
@@ -76,6 +114,7 @@ Claude Code ішінде:
 
 ## Маңызды ескертпелер
 
-- `GOOGLE_API_KEY` — `.env` файлына сақтаңыз (`.gitignore`-да қолданылатын), репоға итермеңіз.
-- Veo API — ақылы (секундпен есептеледі). Жаңа Google Cloud аккаунттарына $300 тегін кредит.
+- `GOOGLE_API_KEY` / `GEMINI_API_KEY` — [aistudio.google.com](https://aistudio.google.com)-дан алынады, **бірдей кілт**.
+- Екеуін де `.env` файлына сақтаңыз (`.gitignore`-да бар), репоға итермеңіз.
+- Veo API — ақылы (секундпен есептеледі). Imagen да ақылы. Жаңа Google Cloud аккаунттарына $300 тегін кредит.
 - `REPLICATE_API_TOKEN` жоқ болса бот сурет генерациясын тегін (Pollinations) жасайды.
