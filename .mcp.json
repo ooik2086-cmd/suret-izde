@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "veo": {
+      "command": "npx",
+      "args": ["-y", "google-veo3-1-mcp-server"]
+    }
+  }
+}
