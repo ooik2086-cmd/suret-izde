@@ -32,3 +32,24 @@ services:
         value: "3"
       - key: DEFAULT_LANG
         value: kz
+
+  # 3) AvtoUsta — авто шеберлерін табатын маркетплейс боты (avtousta/)
+  - type: web
+    name: avtousta
+    runtime: python
+    plan: free
+    rootDir: avtousta
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      # Құпия мәндер: Render дашбордта сұрайды, репозиторийде САҚТАЛМАЙДЫ.
+      - key: BOT_TOKEN
+        sync: false
+      # Тұрақты дерекқор (Render Postgres). Болмаса — SQLite (қайта іске қосылса өшеді).
+      - key: DATABASE_URL
+        sync: false
+      # Әкімші ID (жаңа шебер хабарламасы үшін, міндетті емес).
+      - key: ADMIN_ID
+        sync: false
+      - key: DEFAULT_LANG
+        value: kz
