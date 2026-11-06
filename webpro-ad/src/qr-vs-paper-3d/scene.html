@@ -1,0 +1,253 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#05070f;font-family:'Inter',sans-serif;color:#fff}
+canvas#gl{position:absolute;left:0;top:0;width:1080px;height:1920px}
+.abs{position:absolute}
+.gold{font-family:'Inter Display';font-weight:900;letter-spacing:-2px;line-height:.98;text-align:center;left:0;width:1080px;
+ background:linear-gradient(180deg,#fffbe0 0%,#ffe27a 30%,#f5b400 52%,#c27a00 60%,#ffd75a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 7px 0 #4a2c00) drop-shadow(0 0 28px rgba(255,190,40,.6));opacity:0}
+.chrome{font-family:'Inter Display';font-weight:900;letter-spacing:-2px;line-height:.98;text-align:center;left:0;width:1080px;
+ background:linear-gradient(180deg,#ffffff 0%,#e8f1ff 45%,#9fb7e6 55%,#ffffff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 7px 0 #0b2a7a) drop-shadow(0 0 26px rgba(80,160,255,.6));opacity:0}
+.red{background:linear-gradient(180deg,#ffe1d6,#ff6a3d 50%,#c4220a 58%,#ff8a5c);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 7px 0 #3d0800) drop-shadow(0 0 26px rgba(255,80,40,.55))}
+.chip{left:80px;width:920px;height:118px;display:flex;align-items:center;gap:26px;padding:0 34px;font-size:44px;font-weight:800;opacity:0;
+ border-radius:32px;background:linear-gradient(160deg,rgba(20,34,80,.85),rgba(6,10,30,.9));border:3px solid rgba(90,170,255,.9);box-shadow:0 0 30px rgba(60,140,255,.55),inset 0 0 30px rgba(60,140,255,.18)}
+.chip.g{border-color:rgba(255,200,60,.95);box-shadow:0 0 30px rgba(255,180,40,.5),inset 0 0 30px rgba(255,180,40,.15)}
+.chip.r{border-color:rgba(255,90,60,.95);box-shadow:0 0 30px rgba(255,70,40,.5),inset 0 0 30px rgba(255,70,40,.15)}
+.ic{flex:none;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:38px;font-weight:900}
+.ic.x{background:#ff4b2b;box-shadow:0 0 20px #ff4b2b}.ic.v{background:#1fd16a;box-shadow:0 0 20px #1fd16a}
+#dim{position:absolute;inset:0;background:#04060d;opacity:0}
+#logo{left:90px;top:300px;width:900px;height:900px;opacity:0}
+#logo img{width:100%;height:100%;border-radius:50%}
+#poster{left:90px;top:100px;width:900px;height:1599px;border-radius:36px;overflow:hidden;opacity:0;border:4px solid rgba(255,205,70,.95);box-shadow:0 0 40px rgba(255,180,40,.65),0 30px 80px rgba(0,0,0,.6)}
+#poster img{width:100%;height:100%}
+.ring{position:absolute;border-radius:50%;border:5px solid rgba(80,255,140,.9);box-shadow:0 0 30px rgba(60,255,120,.8);opacity:0}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+</style></head><body>
+<canvas id="gl" width="1080" height="1920"></canvas>
+<!-- overlays -->
+<div class="abs chrome" id="tA1" style="top:150px;font-size:112px">Қағаз мәзір</div>
+<div class="abs gold" id="tA2" style="top:272px;font-size:84px">немесе</div>
+<div class="abs gold" id="tA3" style="top:368px;font-size:140px">QR-МӘЗІР?</div>
+<div class="abs gold red" id="tB" style="top:150px;font-size:112px">Қағаз мәзір</div>
+<div class="abs chip r" id="cB1" style="top:1350px"><span class="ic x">✕</span>Тозады, кірлейді</div>
+<div class="abs chip r" id="cB2" style="top:1495px"><span class="ic x">✕</span>Баға өзгерсе — қайта басу</div>
+<div class="abs gold" id="tC" style="top:130px;font-size:120px">QR-МӘЗІР</div>
+<div class="abs chrome" id="tC2" style="top:262px;font-size:64px">қонақтың өз телефонында</div>
+<div class="abs chip g" id="cD1" style="top:1440px"><span class="ic v">✓</span>Әр тағамның суреті</div>
+<div class="abs chip" id="cD2" style="top:1585px"><span class="ic v">✓</span>Қазақша · Русский · English</div>
+<div class="abs chip g" id="cE1" style="top:1440px"><span class="ic v">✓</span>Баға 1 минутта жаңарады</div>
+<div class="abs chip" id="cE2" style="top:1585px"><span class="ic v">✓</span>Басып шығару шығыны жоқ</div>
+<div class="abs gold" id="tF" style="top:150px;font-size:96px">Даяшыны күтпей</div>
+<div class="abs chrome" id="tF2" style="top:262px;font-size:80px">бірден таңдайды</div>
+<div id="dim"></div>
+<div class="abs" id="logo"><img src="logo.png"></div>
+<div class="abs gold" id="tG" style="top:1260px;font-size:92px">жасап береді</div>
+<div class="abs" id="poster"><img src="poster.png"></div>
+<div class="ring" id="rg1"></div><div class="ring" id="rg2"></div>
+<div id="flash"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+const W=1080,H=1920;
+const cl=x=>Math.max(0,Math.min(1,x)),eo=x=>1-Math.pow(1-x,3),ei=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const eb=x=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const T=window.TIM; // timings
+const loadImg=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src});
+const [poster,qrimg,bgimg]=await Promise.all([loadImg('poster.png'),loadImg('qr.png'),loadImg('bg.jpg')]);
+await document.fonts.ready;
+
+const r=new THREE.WebGLRenderer({canvas:document.getElementById('gl'),antialias:true,preserveDrawingBuffer:true});
+r.setSize(W,H,false);r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.05;
+r.shadowMap.enabled=true;r.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x05070f);
+const pm=new THREE.PMREMGenerator(r);scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture;scene.environmentIntensity=0.25;
+scene.fog=new THREE.Fog(0x070910,2.5,7);
+const cam=new THREE.PerspectiveCamera(40,W/H,0.01,50);scene.add(cam);
+
+function ctex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return {c,g,t}}
+
+// backdrop (blurred restaurant)
+{const t=new THREE.Texture(bgimg);t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(6,10.6),new THREE.MeshBasicMaterial({map:t,color:0x8a8a8a,fog:false}));m.position.set(0,1.6,-3.2);scene.add(m);}
+// table wood
+const wood=ctex(1024,1024,(g,w,h)=>{g.fillStyle='#3a2414';g.fillRect(0,0,w,h);let s=3;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647};
+ for(let i=0;i<260;i++){const y=rnd()*h;g.strokeStyle=`rgba(${20+rnd()*40|0},${10+rnd()*20|0},${5},${.15+rnd()*.35})`;g.lineWidth=1+rnd()*4;g.beginPath();g.moveTo(0,y);
+ for(let x=0;x<=w;x+=32)g.lineTo(x,y+Math.sin(x*.01+i)*6*rnd());g.stroke();}
+ const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'rgba(255,190,120,.05)');gr.addColorStop(.5,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(255,190,120,.06)');g.fillStyle=gr;g.fillRect(0,0,w,h)});
+wood.t.wrapS=wood.t.wrapT=THREE.RepeatWrapping;wood.t.repeat.set(2,2);
+const table=new THREE.Mesh(new THREE.PlaneGeometry(4,4),new THREE.MeshStandardMaterial({map:wood.t,roughness:.45,metalness:.05}));
+table.rotation.x=-Math.PI/2;table.receiveShadow=true;scene.add(table);
+
+// paper menu
+const PM={state:-1};
+const paper=ctex(840,1200,()=>{});
+function drawPaper(st){const g=paper.g,w=840,h=1200;
+ const gr=g.createLinearGradient(0,0,w,h);gr.addColorStop(0,'#efe2c5');gr.addColorStop(1,'#d2ba8f');g.fillStyle=gr;g.fillRect(0,0,w,h);
+ g.strokeStyle='rgba(120,90,40,.08)';for(let y=0;y<h;y+=46){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()}
+ g.fillStyle='#4a3a25';g.textAlign='center';g.font='bold 76px "DejaVu Serif"';g.fillText('МӘЗІР',w/2,150);
+ g.font='italic 30px "DejaVu Serif"';g.globalAlpha=.6;g.fillText('кафе «Дастархан»',w/2,205);g.globalAlpha=1;
+ const items=[['Бешбармақ','3 200'],['Палау','2 500'],['Мәнті','2 200'],['Лағман','2 400'],['Бауырсақ','800'],['Қымыз','1 000'],['Шай','500']];
+ g.font='40px "DejaVu Serif"';items.forEach(([n,p],i)=>{const y=320+i*110;g.textAlign='left';g.fillText(n,70,y);g.textAlign='right';g.fillText(p,w-70,y);
+  g.setLineDash([4,10]);g.strokeStyle='rgba(74,58,37,.5)';g.lineWidth=3;g.beginPath();g.moveTo(70+g.measureText(n).width+300*0+0,y);g.stroke();g.setLineDash([]);
+  const nw=(g.textAlign='left',g.measureText(n).width);g.textAlign='right';const pw=g.measureText(p).width;
+  g.setLineDash([3,11]);g.beginPath();g.moveTo(70+nw+16,y-8);g.lineTo(w-70-pw-16,y-8);g.stroke();g.setLineDash([]);});
+ if(st>=1){g.strokeStyle='#c0392b';g.lineWidth=7;g.beginPath();g.moveTo(w-200,430-12);g.lineTo(w-60,430-22);g.stroke();
+  g.save();g.translate(w-330,412);g.rotate(-.12);g.fillStyle='#c0392b';g.font='italic bold 46px "DejaVu Serif"';g.textAlign='center';g.fillText('2 700',0,0);g.restore();}
+ if(st>=2){const c=g.createRadialGradient(560,760,90,560,760,150);c.addColorStop(0,'rgba(110,60,15,0)');c.addColorStop(.75,'rgba(110,60,15,.45)');c.addColorStop(.85,'rgba(110,60,15,.15)');c.addColorStop(1,'rgba(110,60,15,0)');g.fillStyle=c;g.fillRect(380,580,360,360);
+  const c2=g.createRadialGradient(200,980,10,200,980,120);c2.addColorStop(0,'rgba(120,80,30,.35)');c2.addColorStop(1,'rgba(120,80,30,0)');g.fillStyle=c2;g.fillRect(60,860,280,240);
+  g.strokeStyle='rgba(70,50,25,.6)';g.lineWidth=3;g.beginPath();g.moveTo(w,840);g.lineTo(w-120,900);g.lineTo(w-60,960);g.lineTo(w-160,1040);g.stroke();
+  g.fillStyle='rgba(60,40,20,.10)';g.fillRect(0,590,w,6);}
+ paper.t.needsUpdate=true;}
+drawPaper(0);
+const paperMesh=new THREE.Mesh(new THREE.PlaneGeometry(.21,.30),new THREE.MeshStandardMaterial({map:paper.t,roughness:.9}));
+paperMesh.rotation.x=-Math.PI/2;paperMesh.rotation.z=.18;paperMesh.position.set(-.085,.0015,.07);paperMesh.receiveShadow=true;paperMesh.castShadow=true;scene.add(paperMesh);
+
+// QR tent
+const qrt=ctex(600,860,(g,w,h)=>{g.fillStyle='#0b0b0e';g.fillRect(0,0,w,h);
+ const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(255,255,255,.08)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);
+ g.strokeStyle='#e9b949';g.lineWidth=8;g.strokeRect(16,16,w-32,h-32);
+ g.fillStyle='#ffd45a';g.textAlign='center';g.font='900 92px "Inter Display"';g.fillText('QR',w/2,140);g.fillText('МӘЗІР',w/2,240);
+ g.fillStyle='#fff';const s=420;g.beginPath();g.roundRect((w-s)/2-14,282,s+28,s+28,26);g.fill();g.drawImage(qrimg,(w-s)/2,296,s,s);
+ g.fillStyle='#fff';g.font='700 40px "Inter"';g.fillText('Телефонмен',w/2,800-40);g.fillText('сканерлеңіз',w/2,800+8);});
+const tentMat=new THREE.MeshStandardMaterial({map:qrt.t,roughness:.25,metalness:.2,emissive:0xffffff,emissiveMap:qrt.t,emissiveIntensity:.035});
+const tent=new THREE.Group();
+const pw=.115,ph=.165,ang=.22;
+const f1=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,.003),[0,0,0,0,tentMat,new THREE.MeshStandardMaterial({color:0x0b0b0e,roughness:.3})].map(m=>m||new THREE.MeshStandardMaterial({color:0x111111})));
+f1.position.set(0,ph/2*Math.cos(ang),ph/2*Math.sin(ang));f1.rotation.x=-ang;f1.castShadow=true;tent.add(f1);
+const f2=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,.003),new THREE.MeshStandardMaterial({color:0x0b0b0e,roughness:.3}));
+f2.position.set(0,ph/2*Math.cos(ang),-ph/2*Math.sin(ang));f2.rotation.x=ang;f2.castShadow=true;tent.add(f2);
+tent.position.set(.095,0,-.09);tent.rotation.y=-.25;scene.add(tent);
+
+// plate & glass decor
+const plate=new THREE.Mesh(new THREE.CylinderGeometry(.12,.09,.012,64),new THREE.MeshStandardMaterial({color:0xf3efe8,roughness:.25}));plate.position.set(-.05,.006,-.32);plate.castShadow=true;plate.receiveShadow=true;/*plate removed*/
+const glassMat=new THREE.MeshPhysicalMaterial({color:0xffffff,roughness:.05,transmission:.9,thickness:.01,transparent:true,opacity:.35});
+const glass=new THREE.Mesh(new THREE.CylinderGeometry(.035,.03,.12,48,1,true),glassMat);glass.position.set(-.2,.06,-.3);scene.add(glass);
+// candle
+const candle=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.07,32),new THREE.MeshStandardMaterial({color:0xf5ecd8,roughness:.6,emissive:0xffa040,emissiveIntensity:.08}));candle.position.set(.24,.035,-.22);candle.castShadow=true;scene.add(candle);
+const flameTex=ctex(128,256,(g,w,h)=>{const gr=g.createRadialGradient(64,170,4,64,150,90);gr.addColorStop(0,'rgba(255,250,220,1)');gr.addColorStop(.3,'rgba(255,190,80,.9)');gr.addColorStop(1,'rgba(255,120,20,0)');g.fillStyle=gr;g.fillRect(0,0,w,h)});
+const flame=new THREE.Sprite(new THREE.SpriteMaterial({map:flameTex.t,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));flame.scale.set(.03,.06,1);flame.position.set(.24,.095,-.22);scene.add(flame);
+const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:flameTex.t,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.35}));halo.scale.set(.25,.3,1);halo.position.copy(flame.position);scene.add(halo);
+// lights
+scene.add(new THREE.AmbientLight(0x6070a0,.25));
+const key=new THREE.DirectionalLight(0xffd9a8,1.6);key.position.set(.8,1.6,.9);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-.8,right:.8,top:.8,bottom:-.8,near:.1,far:5});key.shadow.bias=-.0005;scene.add(key);
+const candleL=new THREE.PointLight(0xffa850,1.2,1.6,1.6);candleL.position.set(.24,.12,-.22);scene.add(candleL);
+const rim=new THREE.DirectionalLight(0x4f8cff,1.3);rim.position.set(-1.2,.8,-1.4);scene.add(rim);
+const blue=new THREE.PointLight(0x3a7bff,0,1.2,1.5);blue.position.set(.1,.25,.12);scene.add(blue);
+
+// gold particles
+const N=260,pg=new THREE.BufferGeometry(),pos=new Float32Array(N*3),seed=[];let sd=11;const rnd=()=>{sd=(sd*16807)%2147483647;return sd/2147483647};
+for(let i=0;i<N;i++){seed.push([rnd()*1.6-.8,rnd()*1.0,rnd()*1.4-.9,rnd()*6.28,.02+rnd()*.05]);}
+pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const dotT=ctex(64,64,(g)=>{const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,240,180,1)');gr.addColorStop(.35,'rgba(255,200,80,.7)');gr.addColorStop(1,'rgba(255,170,40,0)');g.fillStyle=gr;g.fillRect(0,0,64,64)});
+const pts=new THREE.Points(pg,new THREE.PointsMaterial({size:.012,map:dotT.t,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:0xffd27a}));scene.add(pts);
+
+// phone
+const phone=new THREE.Group();
+const body=new THREE.Mesh(new RoundedBoxGeometry(.076,.158,.008,6,.009),new THREE.MeshStandardMaterial({color:0x15161a,metalness:.85,roughness:.25}));phone.add(body);
+const SW=720,SH=1520;const scr=ctex(SW,SH,()=>{});
+const screen=new THREE.Mesh(new THREE.PlaneGeometry(.0705,.1488),new THREE.MeshBasicMaterial({map:scr.t,toneMapped:false}));screen.position.z=.0041;phone.add(screen);
+const glowT=ctex(256,256,(g)=>{const gr=g.createRadialGradient(128,128,40,128,128,128);gr.addColorStop(0,'rgba(80,150,255,.9)');gr.addColorStop(1,'rgba(80,150,255,0)');g.fillStyle=gr;g.fillRect(0,0,256,256)});
+const glow=new THREE.Mesh(new THREE.PlaneGeometry(.16,.24),new THREE.MeshBasicMaterial({map:glowT.t,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));glow.position.z=-.0045;phone.add(glow);
+cam.add(phone);phone.visible=false;
+
+// dish data (crops from poster)
+const dishes=[
+ {crop:[497,630,112,72],n:['Сиыр стейгі','Стейк из говядины','Beef steak'],p:'4 500'},
+ {crop:[492,718,112,72],n:['Көкөніс салаты','Овощной салат','Garden salad'],p:'2 200'},
+ {crop:[486,808,112,72],n:['Томат сорпасы','Томатный суп','Tomato soup'],p:'1 900'},
+ {crop:[480,900,112,72],n:['Чизкейк','Чизкейк','Cheesecake'],p:'1 800'},
+ {crop:[474,988,112,70],n:['Лимонад','Лимонад','Lemonade'],p:'1 200'}];
+const head=['Мәзір','Меню','Menu'],cat=['Негізгі тағамдар','Основные блюда','Main dishes'];
+function rr(g,x,y,w,h,r){g.beginPath();g.roundRect(x,y,w,h,r)}
+function drawMenu(t){const g=scr.g;g.fillStyle='#0f1117';g.fillRect(0,0,SW,SH);
+ // status
+ g.fillStyle='#fff';g.font='600 30px Inter';g.textAlign='left';g.fillText('12:48',56,70);g.textAlign='right';g.fillText('5G ▮▮▮',SW-56,70);
+ const L=t<T.D+1.6?0:t<T.D+2.6?1:t<T.D+3.5?2:0;
+ g.textAlign='center';g.fillStyle='#ffd45a';g.font='900 64px "Inter Display"';g.fillText(head[L].toUpperCase(),SW/2,180);
+ g.fillStyle='rgba(255,255,255,.6)';g.font='500 28px Inter';g.fillText('Дастархан · Үстел №7',SW/2,226);
+ const tabs=['ҚАЗ','РУС','ENG'];tabs.forEach((s,i)=>{const x=SW/2-180+i*125;rr(g,x,262,112,58,29);g.fillStyle=i===L?'#ffd45a':'rgba(255,255,255,.12)';g.fill();g.fillStyle=i===L?'#1a1200':'#fff';g.font='800 26px Inter';g.fillText(s,x+56,301)});
+ g.textAlign='left';g.fillStyle='#fff';g.font='800 34px Inter';g.fillText(cat[L],40,385);
+ dishes.forEach((d,i)=>{const y=420+i*212;rr(g,28,y,SW-56,192,28);g.fillStyle='#fff';g.fill();
+  const out=(i===3&&t>T.E+3.2);g.save();if(out)g.globalAlpha=.45;
+  g.save();rr(g,44,y+16,160,160,20);g.clip();const [cx,cy,cw,ch]=d.crop;const s=Math.max(160/cw,160/ch);g.drawImage(poster,cx,cy,cw,ch,44+(160-cw*s)/2,y+16+(160-ch*s)/2,cw*s,ch*s);g.restore();
+  g.fillStyle='#14161c';g.font='800 36px Inter';g.fillText(d.n[L],226,y+70);
+  let price=d.p;let hl=false;if(i===0&&t>T.E+1.2){price='4 900';hl=t<T.E+2.9}
+  g.fillStyle=hl?'#0a9d48':'#1a7f3c';g.font='900 40px Inter';g.fillText(price+' ₸',226,y+140);g.restore();
+  if(hl){g.strokeStyle='#1fd16a';g.lineWidth=8;rr(g,28,y,SW-56,192,28);g.stroke();}
+  if(out){rr(g,SW-250,y+24,200,52,14);g.fillStyle='#ff4b2b';g.fill();g.fillStyle='#fff';g.font='900 26px Inter';g.textAlign='center';g.fillText('ТАУСЫЛДЫ',SW-150,y+60);g.textAlign='left';}
+ });
+ const tp=cl((t-T.E-1.3)/.3)*(1-cl((t-T.E-2.9)/.3));if(tp>0){g.globalAlpha=tp;rr(g,40,330,SW-80,100,30);g.fillStyle='#1fd16a';g.fill();g.fillStyle='#fff';g.font='900 40px Inter';g.textAlign='center';g.fillText('✓ Баға жаңартылды',SW/2,395);g.globalAlpha=1;g.textAlign='left';}
+ scr.t.needsUpdate=true;}
+function drawViewfinder(t){const g=scr.g;g.fillStyle='#000';g.fillRect(0,0,SW,SH);
+ // blurred table hint
+ g.globalAlpha=.55;g.drawImage(bgimg,0,0,bgimg.width,bgimg.height,-200,-100,SW+400,SH+200);g.globalAlpha=1;
+ const s=520,x=(SW-s)/2,y=430;g.fillStyle='#0b0b0e';rr(g,x-40,y-150,s+80,s+330,24);g.fill();
+ g.fillStyle='#ffd45a';g.font='900 64px "Inter Display"';g.textAlign='center';g.fillText('QR МӘЗІР',SW/2,y-60);
+ g.fillStyle='#fff';rr(g,x-16,y-16,s+32,s+32,20);g.fill();g.drawImage(qrimg,x,y,s,s);
+ g.strokeStyle='#ffd45a';g.lineWidth=10;const b=70,m=60;[[x-m,y-m,1,1],[x+s+m,y-m,-1,1],[x-m,y+s+m,1,-1],[x+s+m,y+s+m,-1,-1]].forEach(([px,py,dx,dy])=>{g.beginPath();g.moveTo(px,py+dy*b);g.lineTo(px,py);g.lineTo(px+dx*b,py);g.stroke()});
+ const bp=cl((t-T.C-.9)/1.0);if(bp>0&&bp<1){const yy=y+ei(bp<.5?2*bp:2-2*bp)*s;g.fillStyle='rgba(95,208,255,.95)';g.shadowColor='#5fd0ff';g.shadowBlur=30;g.fillRect(x-30,yy-5,s+60,10);g.shadowBlur=0;}
+ const ok=cl((t-T.C-2.0)/.3);if(ok>0){g.globalAlpha=ok;rr(g,60,SH-260,SW-120,120,30);g.fillStyle='#1fd16a';g.fill();g.fillStyle='#fff';g.font='900 42px Inter';g.fillText('✓ Мәзір ашылуда…',SW/2,SH-185);g.globalAlpha=1}
+ g.textAlign='left';scr.t.needsUpdate=true;}
+
+// camera keyframes [t, pos, look]
+const K=[
+ [0,[.02,.40,.58],[0,.02,-.07]],
+ [T.B-.3,[-.02,.36,.50],[-.06,.01,-.03]],
+ [T.B+.6,[-.085,.36,.37],[-.085,0,.05]],
+ [T.C-.2,[-.075,.33,.34],[-.085,0,.06]],
+ [T.C+.6,[.19,.15,.41],[.095,.075,-.09]],
+ [T.D,[.19,.15,.39],[.095,.075,-.09]],
+ [T.F,[.10,.19,.44],[.02,.05,-.06]],
+ [T.G-.4,[.02,.42,.60],[0,.02,-.07]],
+ [T.END,[.02,.38,.54],[0,.02,-.07]]];
+function camAt(t){let i=0;while(i<K.length-2&&t>K[i+1][0])i++;const a=K[i],b=K[i+1];const k=ei(cl((t-a[0])/(b[0]-a[0])));
+ return [a[1].map((v,j)=>lerp(v,b[1][j],k)),a[2].map((v,j)=>lerp(v,b[2][j],k))]}
+const $=id=>document.getElementById(id);
+function ent(id,t,t0,t1,a){const el=$(id);const p=cl((t-t0)/.5),o=t1?cl((t-t1)/.35):0;el.style.opacity=(p<=0?0:cl(p*1.7))*(1-o);const e=eo(p);
+ el.style.transform=(a==='left'?`translateX(${(1-e)*-140}px)`:a==='pop'?`scale(${p<=0?.5:.5+.5*eb(p)})`:`translateY(${(1-e)*70}px)`)+(o>0?` translateY(${-o*30}px)`:'')}
+window.seek=function(t){
+ // particles
+ for(let i=0;i<N;i++){const s=seed[i];const y=((s[1]+t*s[4])%1.0);pos[i*3]=s[0]+Math.sin(t*.7+s[3])*.03;pos[i*3+1]=y*.9;pos[i*3+2]=s[2]+Math.cos(t*.5+s[3])*.03}
+ pg.attributes.position.needsUpdate=true;
+ const fl=1+.08*Math.sin(t*23)+.05*Math.sin(t*37);candleL.intensity=1.2*fl;flame.scale.set(.03,.06*fl,1);
+ // paper state
+ const ps=t>=T.B+3.0?2:t>=T.B+1.2?1:0;if(ps!==PM.state){drawPaper(ps);PM.state=ps;}
+ // camera
+ const [p,l]=camAt(t);cam.position.set(...p);cam.lookAt(...l);
+ // phone
+ const showP=t>T.C-.1&&t<T.F+1.5;phone.visible=showP;
+ if(showP){let off;
+  if(t<T.D){const k=eo(cl((t-T.C)/.8));off=[.028,-.032-(1-k)*.2,-.30];}
+  else if(t<T.F){const k=ei(cl((t-T.D)/.7));off=[lerp(.028,0,k),lerp(-.032,-.02,k),lerp(-.30,-.30,k)];}
+  else{const k=ei(cl((t-T.F)/1.2));off=[0,-.02-k*.25,-.30];}
+  phone.position.set(...off);phone.rotation.set(Math.sin(t*1.3)*.015,Math.sin(t*.9)*.02+(t<T.D?-.08:0),Math.sin(t*1.1)*.01);
+  if(t<T.D)drawViewfinder(t);else drawMenu(t);
+  glow.material.opacity=.35;blue.intensity=t<T.D?1.2:.6;}
+ else blue.intensity=0;
+ r.render(scene,cam);
+ // overlays
+ ent('tA1',t,.15,T.B-.2);ent('tA2',t,.45,T.B-.2);ent('tA3',t,.75,T.B-.2,'pop');
+ ent('tB',t,T.B+.1,T.C-.2);ent('cB1',t,T.B+.5,T.C-.2,'left');ent('cB2',t,T.B+2.0,T.C-.2,'left');
+ ent('tC',t,T.C+.1,T.F-.2,'pop');ent('tC2',t,T.C+.4,T.F-.2);
+ ent('cD1',t,T.D+.3,T.E-.1,'left');ent('cD2',t,T.D+1.4,T.E-.1,'left');
+ ent('cE1',t,T.E+.6,T.F-.2,'left');ent('cE2',t,T.E+2.8,T.F-.2,'left');
+ ent('tF',t,T.F+.2,T.G-.2);ent('tF2',t,T.F+.5,T.G-.2);
+ // G: logo then poster
+ $('dim').style.opacity=.75*cl((t-T.G)/.5);
+ const lp=cl((t-T.G)/.7);const lo=cl((t-T.G2)/.35);$('logo').style.opacity=cl(lp*1.6)*(1-lo);$('logo').style.transform=`scale(${lp<=0?.6:.6+.4*eb(lp)}) rotate(${(1-eo(lp))*-25}deg)`;
+ ent('tG',t,T.G+.5,T.G2);
+ const pp=cl((t-T.G2)/.6);$('poster').style.opacity=pp;$('poster').style.transform=`scale(${.85+.15*eo(pp)+.03*cl((t-T.G2-1)/4)})`;
+ const rp=t-T.G2-1.2;[['rg1',0],['rg2',.7]].forEach(([id,o])=>{const el=$(id);const ph2=((rp-o)%1.4+1.4)%1.4/1.4;el.style.opacity=rp>o?(1-ph2)*.9:0;const R=50+ph2*200;el.style.width=el.style.height=R*2+'px';
+  const sc=.85+.15+.03*cl((t-T.G2-1)/4);const cx=540+((90+115*900/941)-540)*sc,cy=900+((100+1527*900/941)-900)*sc;el.style.left=cx-R+'px';el.style.top=cy-R+'px'});
+ $('flash').style.opacity=Math.max(0,.4-Math.abs(t-T.C-2.0)*2)+Math.max(0,.4-Math.abs(t-T.G2)*2);
+};
+window.__ready=true;
+</script></body></html>
